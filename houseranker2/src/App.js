@@ -1,25 +1,26 @@
-import logo from './logo.svg';
-import './App.css';
+// App.js
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import Login from './LoginPage';
+import ResetPassword from './ResetPassword';
+import VerifyCode from './VerifyCode';
+import ChangePassword from './ChangePassword';
+import Dashboard from './Dashboard';
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
-}
+const App = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+    return (
+        <Router>
+            <Routes>
+                <Route path="/" element={!isAuthenticated ? <Login setIsAuthenticated={setIsAuthenticated}/> : <Navigate to="/dashboard" />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/verify-code" element={<VerifyCode />} />
+                <Route path="/change-password" element={<ChangePassword />} />
+                <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/" />} />
+            </Routes>
+        </Router>
+    );
+};
 
 export default App;
