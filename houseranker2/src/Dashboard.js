@@ -1,5 +1,5 @@
 // Dashboard.js
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Modal from '@mui/material/Modal';
 import Box from '@mui/material/Box';
 import Slider from '@mui/material/Slider';
@@ -9,8 +9,20 @@ import Button from '@mui/material/Button';
 import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import './Dashboard.css';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+        navigate('/'); // Redirect to login if token is missing
+        } else {
+        // Proceed with data fetching
+        fetchData();
+        }
+    }, [navigate]);
   const [sliderValues, setSliderValues] = useState([1, 1, 1]); // Initial sliders
   const [entries, setEntries] = useState([]); // Entries for the table
   const [isNewHouseOpen, setIsNewHouseOpen] = useState(false); // Modal state for adding new entry
@@ -29,11 +41,42 @@ const Dashboard = () => {
   const [name, setName] = useState('');
 
   const [sliders, setSliders] = useState([0, 0, 0]);
+  const fetchData = async () => {
+    const token = localStorage.getItem('token');
+    if (token) {
+        const response = await fetch('http://localhost:5000/api/user/', {
+            headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await response.json();
+      
+      // Populate state with fetched data
+      if(data)
+      {
+        setSliderValues(data.sliderValues || [1, 1, 1, 1]);
+        setPointsOfInterest(data.pointsOfInterest || []);
+        setEntries(data.entries || []);
+      }
+    }
+  };
+  const saveUserData = async (updatedData) => {
+    const token = localStorage.getItem('token');
+    await fetch('http://localhost:5000/api/user/', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(updatedData)
+    });
+  };
+  
+
   // Open modal for adding or editing
   const openModal = (point = null) => {
     if (point) {
       setAddress(point.address);
       setSliders(point.importance);
+      setName(point.name);
       setCurrentPoint(point);
     } else {
       setAddress('');
@@ -46,14 +89,18 @@ const Dashboard = () => {
   // Save point of interest
   const savePointOfInterest = () => {
     const newPoint = { name, address, importance: sliders };
+
     if (currentPoint) {
       // Edit existing point
-      setPointsOfInterest(
-        pointsOfInterest.map((point) => (point === currentPoint ? newPoint : point))
-      );
+      const newPOI = pointsOfInterest.map((point) => (point === currentPoint ? newPoint : point));
+      setPointsOfInterest(newPOI);
+      saveUserData({ sliderValues, pointsOfInterest: newPOI, entries });
+
     } else {
       // Add new point
-      setPointsOfInterest([...pointsOfInterest, newPoint]);
+      const newPOI = [...pointsOfInterest, newPoint];
+      setPointsOfInterest(newPOI);
+      saveUserData({ sliderValues, pointsOfInterest: newPOI, entries });
     }
     renderTableRows();
     setIsNewPointOpen(false);
@@ -62,19 +109,18 @@ const Dashboard = () => {
     // Delete point of interest
     const deletePointOfInterest = () => {
         if (currentPoint) {
-          setPointsOfInterest(
-            pointsOfInterest.filter((point) => point !== currentPoint)
-          );
+            const newPOI = pointsOfInterest.filter((point) => point !== currentPoint);
+          setPointsOfInterest(newPOI);
+          saveUserData(newPOI);
         }
         setIsNewPointOpen(false);
       };
     // Function to handle slider value change
     const handleSliderChange = (index, value) => {
-        setSliderValues(prev => {
-          const updated = [...prev];
-          updated[index] = value;
-          return updated;
-        });
+        const updatedSliders = [...sliderValues];
+        updatedSliders[index] = value;
+        setSliderValues(updatedSliders);
+        saveUserData({ sliderValues: updatedSliders, pointsOfInterest, entries });
       };
 
   const handleNewEntryChange = (field, value) => {
@@ -82,9 +128,12 @@ const Dashboard = () => {
   };
 
   const addNewEntry = () => {
-    setEntries([...entries, newEntry]);
+    const newEntries = [...entries, newEntry];
+    setEntries(newEntries);
     setNewEntry({ Link: '', Description: '', Address: '', Typology: '', SqMeters: '', Price: '' });
     setIsNewHouseOpen(false);
+    saveUserData({ sliderValues, pointsOfInterest, entries:newEntries });
+
   };
 
     const renderTableHeaders = () => {
@@ -174,7 +223,7 @@ const Dashboard = () => {
                           <div className="importance-indicators">
                             {point.importance.map((imp, i) => (
                               <div key={i} className="importance-circle">
-                                <div className={`importance-ring`} data-importance={imp}>
+                                <div className="importance-ring" data-importance={imp}>
                                   <span className="importance-value">{imp}</span> {/* Display the importance value */}
                                 </div>
                               </div>

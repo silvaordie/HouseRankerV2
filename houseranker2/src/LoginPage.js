@@ -31,67 +31,77 @@ const LoginPage = ({setIsAuthenticated  }) => {
 
 
 // Login form component
-const LoginForm = ({ setErrorMessage, setIsAuthenticated  }) => {
+const LoginForm = ({ setErrorMessage, setIsAuthenticated }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(false); // State to track loading
-    const navigate = useNavigate(); // Initialize navigate hook
+    const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
 
     const handleLogin = async (e) => {
-      e.preventDefault();
+        e.preventDefault();
         setLoading(true);
-      try {
-        const response = await fetch('http://localhost:5000/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        });
-  
-        const data = await response.json();
-  
-        if (response.ok) {
-          // Store the token in localStorage
-          localStorage.setItem('token', data.token);
-          navigate('/dashboard');
-          setIsAuthenticated(true);
 
-          // Redirect or update UI as needed
-        } else {
-          // Set the error message if login fails
-          setErrorMessage(data.message || 'Login failed');
-          
+        try {
+            const response = await fetch('http://localhost:5000/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Save token and expiration time
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('tokenExpiration', Date.now() + data.expiresIn * 1000); // Set expiration
+
+                setIsAuthenticated(true); // Update auth state
+                navigate('/dashboard'); // Redirect to dashboard
+            } else {
+                setErrorMessage(data.message || 'Login failed');
+                setIsAuthenticated(false);
+            }
+        } catch (error) {
+            setErrorMessage('Error connecting to the server');
+        } finally {
+            setLoading(false);
         }
-      } catch (error) {
-        setErrorMessage('Error connecting to the server');
-      }finally {
-        setLoading(false); // Hide the spinner
-      }
     };
-  
+
+    // Clear error on user input change
+    const handleInputChange = (e) => {
+        setErrorMessage('');
+        const { name, value } = e.target;
+        name === 'email' ? setEmail(value) : setPassword(value);
+    };
+
     return (
         <div className="container" style={{ position: 'relative' }}>
             <form onSubmit={handleLogin}>
                 <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
+                    type="email"
+                    placeholder="Email"
+                    value={email}
+                    name="email"
+                    onChange={handleInputChange}
+                    required
                 />
                 <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
+                    type="password"
+                    placeholder="Password"
+                    value={password}
+                    name="password"
+                    onChange={handleInputChange}
+                    required
                 />
-                <button type="submit">Login</button>
+                <button type="submit" disabled={loading}>
+                    {loading ? 'Logging in...' : 'Login'}
+                </button>
             </form>
-            {loading && <Spinner />} {/* Show spinner while loading */}
+            {loading && <Spinner />} {/* Show spinner if loading */}
         </div>
     );
-  };
-
+};
 // Sign-up form component
 const SignUpForm = ({ setErrorMessage }) => {
     const [email, setEmail] = useState('');
