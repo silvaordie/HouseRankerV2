@@ -10,6 +10,7 @@ import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import './Dashboard.css';
 import { useNavigate } from 'react-router-dom';
+import segmentImage from './img/segment.png'; // Import your segment image
 
 const Dashboard = () => {
     const navigate = useNavigate();
@@ -23,7 +24,7 @@ const Dashboard = () => {
         fetchData();
         }
     }, [navigate]);
-  const [sliderValues, setSliderValues] = useState([1, 1, 1]); // Initial sliders
+  const [sliderValues, setSliderValues] = useState([0, 0, 0, 0]); // Initial sliders
   const [entries, setEntries] = useState([]); // Entries for the table
   const [isNewHouseOpen, setIsNewHouseOpen] = useState(false); // Modal state for adding new entry
   const [newEntry, setNewEntry] = useState({
@@ -33,6 +34,7 @@ const Dashboard = () => {
     Typology: '',
     SqMeters: '',
     Price: '',
+    Score: 0
   });
   const [pointsOfInterest, setPointsOfInterest] = useState([]);
   const [isNewPointOpen, setIsNewPointOpen] = useState(false);
@@ -130,10 +132,9 @@ const Dashboard = () => {
   const addNewEntry = () => {
     const newEntries = [...entries, newEntry];
     setEntries(newEntries);
-    setNewEntry({ Link: '', Description: '', Address: '', Typology: '', SqMeters: '', Price: '' });
+    setNewEntry({ Link: '', Description: '', Address: '', Typology: '', SqMeters: '', Price: '', Score: 0 });
     setIsNewHouseOpen(false);
     saveUserData({ sliderValues, pointsOfInterest, entries:newEntries });
-
   };
 
     const renderTableHeaders = () => {
@@ -177,7 +178,7 @@ const Dashboard = () => {
                     {scores.map((score, index) => (
                         <td key={index}>{score}</td>
                     ))}
-                    <td>{/* Placeholder for overall score */}</td>
+                    <td>{entry.Score}</td>
                 </tr>
             );
         });
