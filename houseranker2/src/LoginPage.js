@@ -3,6 +3,10 @@ import "./App.css"
 import React, { useState } from 'react';
 import { Link, useNavigate  } from 'react-router-dom';
 import Spinner from './Spinner';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { auth, db } from "./firebase"; // Make sure your Firebase config is imported
+import { setDoc, doc } from "firebase/firestore"; // Import Firestore functions
+
 
 const LoginPage = ({setIsAuthenticated  }) => {
     const [errorMessage, setErrorMessage] = useState('');
@@ -42,27 +46,16 @@ const LoginForm = ({ setErrorMessage, setIsAuthenticated }) => {
         setLoading(true);
 
         try {
-            const response = await fetch('http://localhost:5000/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
-            });
+          const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
-            const data = await response.json();
-
-            if (response.ok) {
-                // Save token and expiration time
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('tokenExpiration', Date.now() + data.expiresIn * 1000); // Set expiration
-
+            /*if (userCredential) {
                 setIsAuthenticated(true); // Update auth state
                 navigate('/dashboard'); // Redirect to dashboard
             } else {
-                setErrorMessage(data.message || 'Login failed');
                 setIsAuthenticated(false);
-            }
+            }*/
         } catch (error) {
-            setErrorMessage('Error connecting to the server');
+            setErrorMessage(error.message);
         } finally {
             setLoading(false);
         }
@@ -113,22 +106,22 @@ const SignUpForm = ({ setErrorMessage }) => {
       e.preventDefault();
       setLoading(true); // Show the spinner
       try {
-        const response = await fetch('http://localhost:5000/api/auth/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        });
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
   
-        const data = await response.json();
-        if (response.ok) {
-          alert(data.message);
-          setErrorMessage('');
-        } else {
-          setErrorMessage(data.message);
+        if (userCredential) {
+            // Store additional user information in Firestore
+            await setDoc(doc(db, "users", user.uid), { // Set document with user's UID
+              email: user.email,
+              createdAt: new Date().toISOString()
+          });
+          alert("User created: " + userCredential.user.email); // Display user email instead of the user object
         }
       } catch (error) {
-        setErrorMessage('Error connecting to the server');
+        await signOut(auth)
+        setErrorMessage(error.message);
       } finally {
+        setErrorMessage('');
         setLoading(false); // Hide the spinner
       }
     };
