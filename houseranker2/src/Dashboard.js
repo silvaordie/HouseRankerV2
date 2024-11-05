@@ -12,9 +12,13 @@ import './Dashboard.css';
 import { useNavigate } from 'react-router-dom';
 import 'font-awesome/css/font-awesome.min.css';
 import '@fortawesome/fontawesome-free/css/all.min.css';
+import { db } from "./firebase"; // Import the Firestore instance
+import { updateDoc, doc,getDoc, setDoc } from "firebase/firestore"; // Import Firestore functions
+import { useAuth } from "./AuthContext"; // Import your custom auth hook/context provider
 
 const Dashboard = () => {
     const navigate = useNavigate();
+    const { currentUser } = useAuth(); // Access currentUser directly from context
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -28,15 +32,7 @@ const Dashboard = () => {
   const [sliderValues, setSliderValues] = useState([0, 0, 0, 0]); // Initial sliders
   const [entries, setEntries] = useState([]); // Entries for the table
   const [isNewHouseOpen, setIsNewHouseOpen] = useState(false); // Modal state for adding new entry
-  const [newEntry, setNewEntry] = useState({
-    Link: '',
-    Description: '',
-    Address: '',
-    Typology: '',
-    SqMeters: '',
-    Price: '',
-    Score: 0
-  });
+
   const [pointsOfInterest, setPointsOfInterest] = useState([]);
   const [isNewPointOpen, setIsNewPointOpen] = useState(false);
   const [currentPoint, setCurrentPoint] = useState(null); // To track if editing an existing point
@@ -50,43 +46,52 @@ const Dashboard = () => {
   const [isEditing, setIsEditing] = useState(false);
 
   const fetchData = async () => {
-    const token = localStorage.getItem('token');
-    if (token) {
-        const response = await fetch('http://localhost:5000/api/user/', {
-            headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await response.json();
-      
-      // Populate state with fetched data
-      if(data)
-      {
-        setSliderValues(data.sliderValues || [1, 1, 1, 1]);
-        setPointsOfInterest(data.pointsOfInterest || []);
-        setEntries(data.entries || []);
+      if (currentUser) { // Ensure currentUser is defined
+        try {
+            const userDocRef = doc(db, "users", currentUser.uid); // Reference to the user's document
+            const userDoc = await getDoc(userDocRef); // Fetch the document
+
+            const data = userDoc.data();
+
+                  // Populate state with fetched data
+            if(data)
+            {
+              setSliderValues(data.sliderValues || [1, 1, 1, 1]);
+              setPointsOfInterest(data.pointsOfInterest || {});
+              setEntries(data.entries || {});
+            }
+          } catch (error) {
+            console.error("Error fetching user data:", error.message);
+        } finally {
+        }
       }
-    }
-  };
+    };
   const saveUserData = async (updatedData) => {
-    const token = localStorage.getItem('token');
-    await fetch('http://localhost:5000/api/user/', {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(updatedData)
-    });
+    if (currentUser) {
+      try {
+          const userDocRef = doc(db, "users", currentUser.uid);
+
+          // Set the document with merge: true to update only specified fields or create if doesn't exist
+
+          await updateDoc(userDocRef, updatedData);
+          console.log("User data updated or created successfully!");
+      } catch (error) {
+          console.error("Error updating or creating user data:", error.message);
+      }
+    } else {
+        console.error("No current user found");
+    }
   };
   
 
   // Open modal for adding or editing
   const openModal = (point = null) => {
     if (point) {
-      setAddress(point.address);
-      setSliders(point.importance);
-      setName(point.name);
-      if(point.maxs)
-        {setMaxs(point.maxs)}
+      setAddress(point);
+      setSliders(pointsOfInterest[point].importance);
+      setName(pointsOfInterest[point].name);
+      if(pointsOfInterest[point].maxs)
+        {setMaxs(pointsOfInterest[point].maxs)}
       setCurrentPoint(point);
     } else {
       setAddress('');
@@ -98,19 +103,19 @@ const Dashboard = () => {
 
   // Save point of interest
   const savePointOfInterest = () => {
-    const newPoint = { name, address, importance: sliders, maxs };
+    const newPoint =   {name, importance: sliders, maxs };
 
     if (currentPoint) {
       // Edit existing point
-      const newPOI = pointsOfInterest.map((point) => (point === currentPoint ? newPoint : point));
-      setPointsOfInterest(newPOI);
-      saveUserData({ sliderValues, pointsOfInterest: newPOI, entries });
+      pointsOfInterest[address] = newPoint;
+      //setPointsOfInterest(newPOI);
+      saveUserData({ pointsOfInterest: pointsOfInterest});
 
     } else {
       // Add new point
-      const newPOI = [...pointsOfInterest, newPoint];
-      setPointsOfInterest(newPOI);
-      saveUserData({ sliderValues, pointsOfInterest: newPOI, entries });
+      pointsOfInterest[address] = newPoint;
+      //setPointsOfInterest(newPOI);
+      saveUserData({ pointsOfInterest: pointsOfInterest});
     }
     renderTableRows();
     setIsNewPointOpen(false);
@@ -130,7 +135,7 @@ const Dashboard = () => {
         const updatedSliders = [...sliderValues];
         updatedSliders[index] = value;
         setSliderValues(updatedSliders);
-        saveUserData({ sliderValues: updatedSliders, pointsOfInterest, entries });
+        saveUserData({ sliderValues: updatedSliders});
       };
 
 
@@ -158,20 +163,20 @@ const updateEntry = () => {
         'Description',
         'Price',
         'Typology',
-        'Sq Meters',
+        'Size',
     ];
 
     // First header row with only point of interest names and addresses
-    const interestPointHeaders = pointsOfInterest.map((point, index) => (
+    const interestPointHeaders = Object.entries(pointsOfInterest).map(([point, value], index) => (
         <th key={index} colSpan="3" style={{ textAlign: 'center' }}>
-            {point.name}
+            {pointsOfInterest[point].name}
             <br />
-            <span style={{ fontSize: 'smaller', color: 'grey' }}>{point.address}</span>
+            <span style={{ fontSize: 'smaller', color: 'grey' }}>{point}</span>
         </th>
     ));
 
     // Second header row with base headers and repeated distance headers
-    const distanceHeaders = pointsOfInterest.flatMap(() => [
+    const distanceHeaders = Object.entries(pointsOfInterest).flatMap(() => [
         'Walking Duration',
         'Driving Duration',
         'Transport Duration',
@@ -201,32 +206,32 @@ const updateEntry = () => {
 };
 const handleDeleteEntry = () => {
     //if (!currentEntry) return; // Exit the function if currentEntry is null or undefined
-
-    const updatedEntries = entries.filter(entry => entry.Link !== currentEntry.Link);
-    setEntries(updatedEntries); // Update the entries array
+    const deleted = currentEntry.link;  
+    delete entries.deleted;
+    setEntries(entries); // Update the entries array
     setCurrentEntry(null); // Reset current entry after deletion
     setIsNewHouseOpen(false); // Close the modal after deletion
-    saveUserData({ sliderValues, pointsOfInterest, entries:updatedEntries });
+    saveUserData({ entries:entries });
 };
 
 const renderTableRows = () => {
-    return entries.map((entry, rowIndex) => {
+    return Object.entries(entries).map(([link, entry], rowIndex) => {
         
         // Generate the data cells for the base headers
         const baseDataCells = [
-            <td key="link"><a href={entry.Link} target="_blank" rel="noopener noreferrer">{entry.Link} </a> </td>,
+            <td key="link"><a href={link} target="_blank" rel="noopener noreferrer">{link} </a> </td>,
             <td key="address">{entry.Address}</td>,
             <td key="description">{entry.Description}</td>,
             <td key="price">{entry.Price}</td>,
             <td key="typology">{entry.Typology}</td>,
-            <td key="sqMeters">{entry.SqMeters}</td>,
+            <td key="sqMeters">{entry.Size}</td>,
         ];
 
         // Generate the distance data cells for each point of interest
-        const interestPointDataCells = pointsOfInterest.flatMap((point, pointIndex) => [
-            <td key={`walking-${pointIndex}`} style={{ textAlign: 'center' }}>{point.importance[0] + " mins" || '-'}</td>,
-            <td key={`driving-${pointIndex}`} style={{ textAlign: 'center' }}>{point.importance[1] + " mins"|| '-'}</td>,
-            <td key={`transport-${pointIndex}`} style={{ textAlign: 'center' }}>{point.importance[2] + " mins"|| '-'}</td>,
+        const interestPointDataCells = Object.entries(pointsOfInterest).map(([link, point], index)  => [
+            <td key={`walking-${index}`} style={{ textAlign: 'center' }}>{point.importance[0] + " mins" || '-'}</td>,
+            <td key={`driving-${index}`} style={{ textAlign: 'center' }}>{point.importance[1] + " mins"|| '-'}</td>,
+            <td key={`transport-${index}`} style={{ textAlign: 'center' }}>{point.importance[2] + " mins"|| '-'}</td>,
         ]);
 
         return (
@@ -251,14 +256,14 @@ const renderTableRows = () => {
 };
 
 const openAddEntryModal = () => {
-    setCurrentEntry({ Link: '', Description: '', Address: '', Typology: '', SqMeters: '', Price: '', Score: 0 });
+    setCurrentEntry({ Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Score: 0 });
     setIsEditing(false);
     setIsNewHouseOpen(true);
 };
 
 // Open modal for editing an entry, ensuring `currentEntry` is defined
 const openEditEntryModal = (entry) => {
-    setCurrentEntry(entry || { Link: '', Description: '', Address: '', Typology: '', SqMeters: '', Price: '', Score: 0 });
+    setCurrentEntry(entry || { Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Score: 0 });
     setIsEditing(true);
     setIsNewHouseOpen(true);
 };
@@ -269,22 +274,12 @@ const handleNewEntryChange = (field, value) => {
 };
 
 const saveOrUpdateEntry = () => {
-    if (isEditing && currentEntry) {
-        // Update the existing entry
-        const updatedEntries = entries.map(entry =>
-            entry.Link === currentEntry.Link ? currentEntry : entry
-        );
-        setEntries(updatedEntries);
-        saveUserData({ sliderValues, pointsOfInterest, entries:updatedEntries });
-    } else if (currentEntry) {
-        // Add a new entry
-        const newEntries = [...entries, currentEntry]
-        setEntries(newEntries);
-        saveUserData({ sliderValues, pointsOfInterest, entries:newEntries });
+    if (currentEntry) {
+        entries[currentEntry.Link] = {"Address":currentEntry.Address, "Description":currentEntry.Description , "Price":currentEntry.Price ,"Typology":currentEntry.Typology,"Size":currentEntry.Size}
+        saveUserData({ entries:entries });
     }
     setIsNewHouseOpen(false); // Close the modal
-    saveUserData()
-};
+  };
 
     const colors = ["#db284e", "#db284e", "#db8829", "#c9db29", "#4caf50", "#007bff"]
     const icons = ["person-walking", "train", "car"]
@@ -318,14 +313,14 @@ const saveOrUpdateEntry = () => {
                 {pointsOfInterest.length === 0 ? (
                 <p>You have no points of interest</p>
                 ) : (
-                    pointsOfInterest.map((point, index) => (
+                  Object.entries(pointsOfInterest).map(([point, value], index) => (
                         <div key={index} className="point-entry">
                           <div className="point-info">
-                                <span className="point-name">{point.name}</span>
-                                <span className="point-address">{point.address}</span>
+                                <span className="point-name">{pointsOfInterest[point].name}</span>
+                                <span className="point-address">{point}</span>
                             </div>
                             <div className="importance-indicators">
-                                {point.importance.map((imp, i) => (
+                                {pointsOfInterest[point].importance.map((imp, i) => (
                                     <div key={i} className="importance-circle">
                                     <svg viewBox="0 0 36 36" className="circular-chart orange">
                                         <path
@@ -354,7 +349,7 @@ const saveOrUpdateEntry = () => {
                                         
                                         {/* Display the max value closer to the icon */}
                                         <text x="18" y="26" textAnchor="middle" fill={colors[imp]} fontSize="6">
-                                        {point.maxs[i] || 0} mins
+                                        {pointsOfInterest[point].maxs[i] || 0} mins
                                         </text>
                                     </svg>
                                     </div>
@@ -389,9 +384,9 @@ const saveOrUpdateEntry = () => {
                     {renderTableHeaders()}
             </thead>
             <tbody>
-                {entries.length === 0 ? (
+                {Object.entries(entries).length === 0 ? (
                     <tr>
-                        <td colSpan={7 + pointsOfInterest.length * 3} style={{ textAlign: 'center' }}>No entries available.</td>
+                        <td colSpan={7 + Object.entries(pointsOfInterest).length * 3} style={{ textAlign: 'center' }}>No entries available.</td>
                     </tr>
                 ) : (
                     renderTableRows()
@@ -406,7 +401,7 @@ const saveOrUpdateEntry = () => {
       <Modal open={isNewHouseOpen} onClose={() => setIsNewHouseOpen(false)}>
         <Box className="modal-box" style={{ display: 'flex', flexDirection: 'column' }}>
             <Typography variant="h6">{isEditing ? 'Edit Entry' : 'Add New Entry'}</Typography>
-            {['Link',  'Address','Description', 'Typology', 'SqMeters', 'Price'].map(field => (
+            {['Link',  'Address','Description', 'Typology', 'Size', 'Price'].map(field => (
                 <TextField
                     key={field}
                     label={field}

@@ -113,7 +113,9 @@ const SignUpForm = ({ setErrorMessage }) => {
             // Store additional user information in Firestore
             await setDoc(doc(db, "users", user.uid), { // Set document with user's UID
               email: user.email,
-              createdAt: new Date().toISOString()
+              createdAt: new Date().toISOString(),
+              entries:{},
+              pointsOfInterest: {}
           });
           alert("User created: " + userCredential.user.email); // Display user email instead of the user object
         }
