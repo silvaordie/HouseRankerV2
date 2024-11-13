@@ -1,7 +1,7 @@
 // src/LoginPage.js
 import "./App.css"
 import React, { useState } from 'react';
-import { Link, useNavigate  } from 'react-router-dom';
+import { Link  } from 'react-router-dom';
 import Spinner from './Spinner';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { auth, db } from "./firebase"; // Make sure your Firebase config is imported
@@ -39,21 +39,13 @@ const LoginForm = ({ setErrorMessage, setIsAuthenticated }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
-    const navigate = useNavigate();
 
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
 
         try {
-          const userCredential = await signInWithEmailAndPassword(auth, email, password);
-
-            /*if (userCredential) {
-                setIsAuthenticated(true); // Update auth state
-                navigate('/dashboard'); // Redirect to dashboard
-            } else {
-                setIsAuthenticated(false);
-            }*/
+          await signInWithEmailAndPassword(auth, email, password);
         } catch (error) {
             setErrorMessage(error.message);
         } finally {

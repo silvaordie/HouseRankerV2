@@ -1,6 +1,6 @@
 // App.js
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Login from './LoginPage';
 import ResetPassword from './ResetPassword';
 import VerifyCode from './VerifyCode';
@@ -18,13 +18,13 @@ const App = () => {
             <Routes>
                 <Route path="/" element={!currentUser ? (
                     <Login />            ) : (
-                    <Navigate to="/dashboard" />)}/>
+                    <Dashboard /> )}/>
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/verify-code" element={<VerifyCode />} />
                 <Route path="/change-password" element={<ChangePassword />} />
                 <Route path="/dashboard" element={currentUser ? (
                     <Dashboard />  ) : (
-                    <Navigate to="/" />)}/>
+                        <Login /> )}/>
             </Routes>
         </Router>
     );

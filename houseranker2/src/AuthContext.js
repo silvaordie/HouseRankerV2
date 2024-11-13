@@ -19,7 +19,6 @@ export const AuthProvider = ({ children }) => {
     // Listen to auth state changes
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
-      console.log("Auth state changed:", user);
     });
     return unsubscribe; // Cleanup subscription on unmount
   }, []);
