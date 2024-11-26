@@ -247,12 +247,12 @@ const Dashboard = () => {
 
       // Generate the data cells for the base headers
       const baseDataCells = [
-        <td key="link"><a href={link} target="_blank" rel="noopener noreferrer">{entry.Link} </a> </td>,
-        <td key="address">{entry.Address}</td>,
-        <td key="description">{entry.Description}</td>,
-        <td key="price">{entry.Price}</td>,
-        <td key="typology">{entry.Typology}</td>,
-        <td key="sqMeters">{entry.Size}</td>,
+        <td key="link"><a href={link} target="_blank" rel="noopener noreferrer">{entry.info.Link} </a> </td>,
+        <td key="address">{entry.info.Address}</td>,
+        <td key="description">{entry.info.Description}</td>,
+        <td key="price">{entry.info.Price}</td>,
+        <td key="typology">{entry.info.Typology}</td>,
+        <td key="sqMeters">{entry.info.Size}</td>,
       ];
 
       // Generate the distance data cells for each point of interest
@@ -314,7 +314,7 @@ const Dashboard = () => {
 
   const saveOrUpdateEntry = () => {
     if (currentEntry) {
-        entries[currentEntry.Adress] = {"Link":currentEntry.Link, "Address":currentEntry.Address, "Description":currentEntry.Description , "Price":currentEntry.Price ,"Typology":currentEntry.Typology,"Size":currentEntry.Size}
+        entries[currentEntry.Adress] = {"info":currentEntry, "scores": {"Link":0, "Address":0, "Description":0 , "Price":0 ,"Typology":0,"Size":0}};
         add_update_place("entries", currentEntry.Address, {"info":currentEntry, "scores": {"Link":0, "Address":0, "Description":0 , "Price":0 ,"Typology":0,"Size":0}})
     }
     setIsNewHouseOpen(false); // Close the modal
