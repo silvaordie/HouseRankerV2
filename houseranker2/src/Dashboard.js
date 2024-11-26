@@ -64,7 +64,7 @@ const Dashboard = () => {
   const [name, setName] = useState('');
 
   const [sliders, setSliders] = useState([0, 0, 0]);
-  const [maxs, setMaxs] = useState([0, 0, 0]);
+  const [maxs, setMaxs] = useState([0, 0, 0, 0]);
   const [currentEntry, setCurrentEntry] = useState(null); // For both adding and editing
   const [isEditing, setIsEditing] = useState(false);
 
@@ -315,7 +315,7 @@ const Dashboard = () => {
   const saveOrUpdateEntry = () => {
     if (currentEntry) {
         entries[currentEntry.Adress] = {"Link":currentEntry.Link, "Address":currentEntry.Address, "Description":currentEntry.Description , "Price":currentEntry.Price ,"Typology":currentEntry.Typology,"Size":currentEntry.Size}
-        add_update_place("entries", currentEntry.Address, currentEntry)
+        add_update_place("entries", currentEntry.Address, {"info":currentEntry, "scores": {"Link":0, "Address":0, "Description":0 , "Price":0 ,"Typology":0,"Size":0}})
     }
     setIsNewHouseOpen(false); // Close the modal
   };

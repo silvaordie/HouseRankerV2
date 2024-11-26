@@ -107,7 +107,8 @@ const SignUpForm = ({ setErrorMessage }) => {
               email: user.email,
               createdAt: new Date().toISOString(),
               entriesStats:{"maxSize":null, "maxTypology":null, "minPrice":null},
-              poiStats:{}
+              poiStats:{},
+              maxs:[2000, 2000, 2000, 2000, 2000]
           });
           alert("User created: " + userCredential.user.email); // Display user email instead of the user object
         }

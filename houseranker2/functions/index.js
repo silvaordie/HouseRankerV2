@@ -9,32 +9,34 @@
 
 const {onDocumentWritten, onDocumentUpdated} = require("firebase-functions/v2/firestore");
 
-const updateScore = (data) => {
-  let score = data.score ? (data.score):();
-  return score
-}
-
-exports.myfunction = onDocumentUpdated("users/{userId}", (event) => {
+exports.myfunction = onDocumentUpdated("users_entries/{userId}/{entryId}", (event) => {
   // Retrieve the current and previous value
   const data = event.data.after.data();
   const previousData = event.data.before.data();
 
   // We'll only update if the name has changed.
   // This is crucial to prevent infinite loops.
-  if (data.sliderValues != previousData.sliderValues ) {
-    data.sliderValues.map((slider, i) => {
-      if (slider != previousData.sliderValues[i])
-      {
-        const dif = slider - previousData.sliderValues[i];
+
+  if (data.info != previousData.info ) {
+    Object.entries(data.info).map(async function ([field, value], index) {
+      if (value != previousData.info[field]) {
+        const userDocRef = doc(db, "users", event.params.userId); // Reference to the user's document
+        const userDoc = await getDoc(userDocRef); // Fetch the document
+        const userData = userDoc.data();
+        const newScores = userData.scores;
+        if (value > userData.maxs[index]) {
+          const newMaxs = [...userData.maxs];
+          newMaxs[index] = value;
+          await updateDoc(userDocRef, { "maxs": newMaxs });
+        }
+
+        newScores[field] = value * userData.maxs[index];
+
+        return event.data.after.ref.set({
+          scores: newScores
+        }, { merge: true });
       }
     });
-  }
-  else
-  {
-
-    return event.data.after.ref.set({
-      Score: updateScore(data)
-    }, {merge: true});
   }
 });
 
