@@ -13,8 +13,9 @@ import './Dashboard.css';
 import 'font-awesome/css/font-awesome.min.css';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import { db } from "./firebase"; // Import the Firestore instance
-import { updateDoc, doc, getDoc, FieldValue  } from "firebase/firestore"; // Import Firestore functions
+import { updateDoc, doc, getDoc, deleteField , setDoc  } from "firebase/firestore"; // Import Firestore functions
 import { useAuth } from "./AuthContext"; // Import your custom auth hook/context provider
+import { deleteUser } from 'firebase/auth';
 
 const Dashboard = () => {
   //const navigate = useNavigate();
@@ -26,14 +27,20 @@ const Dashboard = () => {
       try {
         const userDocRef = doc(db, "users", currentUser.uid); // Reference to the user's document
         const userDoc = await getDoc(userDocRef); // Fetch the document
-        const data = userDoc.data();
+        let data = userDoc.data(); 
+        setSliderValues(data.sliderValues || [1, 1, 1, 1]);
 
-        // Populate state with fetched data
-        if (data) {
-          setSliderValues(data.sliderValues || [1, 1, 1, 1]);
-          setPointsOfInterest(data.pointsOfInterest || {});
-          setEntries(data.entries || {});
-        }
+        const userEntriesRef = doc(db, "users_entries", currentUser.uid);
+        const userPoisRef = doc(db, "users_poi", currentUser.uid)
+
+        const userEntries = await getDoc(userEntriesRef);
+        data = userEntries.data();
+        setEntries(data || {});
+
+        const userPois = await getDoc(userPoisRef);
+        data = userPois.data();
+        setPointsOfInterest(data || {});
+
       } catch (error) {
         console.error("Error fetching user data:", error.message);
       } finally {
@@ -78,21 +85,17 @@ const Dashboard = () => {
       console.error("No current user found");
     }
   };
-  const delUserData = async (updatedData) => {
+  const delUserData = async (document, key) => {
     if (currentUser) {
       try {
-        const userDocRef = doc(db, "users", currentUser.uid);
+        const userDocRef = doc(db, document, currentUser.uid);
 
-        // Set the document with merge: true to update only specified fields or create if doesn't exist
-
-        userDocRef.update( {
-          updatedData: FieldValue.delete(),
+        updateDoc(userDocRef, {
+          [key]: deleteField(),
         });
-        console.log(updatedData)
 
-        console.log("User data updated or created successfully!");
       } catch (error) {
-        console.error("Error updating or creating user data:", error.message);
+        console.error("Error deleting user data:", error.message);
       }
     } else {
       console.error("No current user found");
@@ -114,18 +117,34 @@ const Dashboard = () => {
     }
     setIsNewPointOpen(true);
   };
+  const add_update_place = async (collectionPath, documentId, data) =>{
+    const docRef = doc(db, collectionPath, documentId);
+    const docSnap = await getDoc(docRef);
 
+    if (!docSnap.exists()) {
+      await setDoc(docRef, {"geoloc":[0,0]});
+    }
+
+    let path = "users_";
+    if (collectionPath === "entries")
+      path = path + "entries";
+    else
+      path = path + "poi";
+
+    const userdocRef = doc(db, path, currentUser.uid);
+
+    await setDoc(userdocRef, {[documentId]:data}, {merge:true} );
+
+  };
   // Save point of interest
   const savePointOfInterest = () => {
     const newPoint = { name, importance: sliders, maxs };
     let updatedPointsOfInterest = { ...pointsOfInterest };  // Create a new object
-    if (currentPoint) {
-      updatedPointsOfInterest[address] = newPoint;  // Edit existing point
-    } else {
-      updatedPointsOfInterest[address] = newPoint;  // Add new point
-    }
+
+    updatedPointsOfInterest[address] = newPoint;  // Edit existing point
+
     setPointsOfInterest(updatedPointsOfInterest);  // Update state
-    saveUserData({ pointsOfInterest: updatedPointsOfInterest });
+    add_update_place("pointsOfInterest", address, newPoint);
     setIsNewPointOpen(false);
   };
 
@@ -135,7 +154,7 @@ const Dashboard = () => {
       let updatedPointsOfInterest = { ...pointsOfInterest };  // Create a new object
       delete updatedPointsOfInterest[currentPoint];  // Remove point
       setPointsOfInterest(updatedPointsOfInterest);  // Update state
-      saveUserData({ pointsOfInterest: updatedPointsOfInterest});
+      delUserData("users_poi", currentPoint)
     }
     setIsNewPointOpen(false);
   };
@@ -228,7 +247,7 @@ const Dashboard = () => {
 
       // Generate the data cells for the base headers
       const baseDataCells = [
-        <td key="link"><a href={link} target="_blank" rel="noopener noreferrer">{link} </a> </td>,
+        <td key="link"><a href={link} target="_blank" rel="noopener noreferrer">{entry.Link} </a> </td>,
         <td key="address">{entry.Address}</td>,
         <td key="description">{entry.Description}</td>,
         <td key="price">{entry.Price}</td>,
@@ -267,12 +286,11 @@ const Dashboard = () => {
 
   const handleDeleteEntry = () => {
     //if (!currentEntry) return; // Exit the function if currentEntry is null or undefined
-    delete entries[currentEntry.Link];
+    delete entries[currentEntry.Adress];
     setEntries(entries); // Update the entries array
     setCurrentEntry(null); // Reset current entry after deletion
     setIsNewHouseOpen(false); // Close the modal after deletion
-    console.log(`entries.${currentEntry.Link}`)
-    saveUserData({entries:entries});
+    delUserData("users_entries", currentEntry.Address)
   };
 
   const openAddEntryModal = () => {
@@ -296,8 +314,8 @@ const Dashboard = () => {
 
   const saveOrUpdateEntry = () => {
     if (currentEntry) {
-        entries[currentEntry.Link] = {"Link":currentEntry.Link, "Address":currentEntry.Address, "Description":currentEntry.Description , "Price":currentEntry.Price ,"Typology":currentEntry.Typology,"Size":currentEntry.Size}
-        saveUserData({ entries:entries });
+        entries[currentEntry.Adress] = {"Link":currentEntry.Link, "Address":currentEntry.Address, "Description":currentEntry.Description , "Price":currentEntry.Price ,"Typology":currentEntry.Typology,"Size":currentEntry.Size}
+        add_update_place("entries", currentEntry.Address, currentEntry)
     }
     setIsNewHouseOpen(false); // Close the modal
   };

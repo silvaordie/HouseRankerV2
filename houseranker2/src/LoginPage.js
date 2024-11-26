@@ -106,14 +106,13 @@ const SignUpForm = ({ setErrorMessage }) => {
             await setDoc(doc(db, "users", user.uid), { // Set document with user's UID
               email: user.email,
               createdAt: new Date().toISOString(),
-              entries:{},
               entriesStats:{"maxSize":null, "maxTypology":null, "minPrice":null},
-              pointsOfInterest: {}
+              poiStats:{}
           });
           alert("User created: " + userCredential.user.email); // Display user email instead of the user object
         }
       } catch (error) {
-        await signOut(auth)
+        //await signOut(auth)
         setErrorMessage(error.message);
       } finally {
         setErrorMessage('');
