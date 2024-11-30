@@ -13,29 +13,52 @@ import './Dashboard.css';
 import 'font-awesome/css/font-awesome.min.css';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import { db } from "./firebase"; // Import the Firestore instance
-import { updateDoc, doc, getDoc, deleteField , setDoc  } from "firebase/firestore"; // Import Firestore functions
+import { updateDoc, doc, getDoc, setDoc, collection, getDocs, deleteDoc } from "firebase/firestore"; // Import Firestore functions
 import { useAuth } from "./AuthContext"; // Import your custom auth hook/context provider
-import { deleteUser } from 'firebase/auth';
 
 const Dashboard = () => {
   //const navigate = useNavigate();
   const { currentUser } = useAuth(); // Access currentUser directly from context
+  const [userStats, setUserStats] =useState({});
+  const [userMaxs, setUserMaxs] = useState({});
+
+  const updateUserData = useCallback(async () => {
+    if (currentUser) { // Ensure currentUser is defined
+
+      try {
+        const userDocRef = doc(db, "users_entries", currentUser.uid); // Reference to the user's document
+        const userDoc = await getDoc(userDocRef); // Fetch the document
+        let data = userDoc.data();
+        setSliderValues(data.sliderValues || {"Size":0, "Typology":0, "Price":0,"Coziness":0});
+        setUserMaxs(data.maxs || {});
+        setUserStats(data.stats || {});
+      }catch (error) {
+        console.error("Error fetching user data:", error.message);
+      } finally {
+      }
+    }
+  });
 
   const fetchData = useCallback(async () => {
     if (currentUser) { // Ensure currentUser is defined
 
       try {
-        const userDocRef = doc(db, "users", currentUser.uid); // Reference to the user's document
+        const userDocRef = doc(db, "users_entries", currentUser.uid); // Reference to the user's document
         const userDoc = await getDoc(userDocRef); // Fetch the document
-        let data = userDoc.data(); 
-        setSliderValues(data.sliderValues || [1, 1, 1, 1]);
+        let data = userDoc.data();
+        setSliderValues(data.sliderValues || {"Size":0, "Typology":0, "Price":0,"Coziness":0});
+        setUserMaxs(data.maxs || {});
+        setUserStats(data.stats || {});
 
-        const userEntriesRef = doc(db, "users_entries", currentUser.uid);
+        const collectionRef = collection(db, "users_entries/" + currentUser.uid + "/entries");
+        const querySnapshot = await getDocs(collectionRef);
+        const jsonResult = {};
+        querySnapshot.forEach((doc) => {
+          jsonResult[doc.id] = doc.data();
+        });
+        setEntries(jsonResult || {});
+
         const userPoisRef = doc(db, "users_poi", currentUser.uid)
-
-        const userEntries = await getDoc(userEntriesRef);
-        data = userEntries.data();
-        setEntries(data || {});
 
         const userPois = await getDoc(userPoisRef);
         data = userPois.data();
@@ -48,9 +71,9 @@ const Dashboard = () => {
     }
   }, [currentUser]);
 
-  useEffect(() => {  
-      fetchData();
-  }, [ fetchData]);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const [sliderValues, setSliderValues] = useState([0, 0, 0, 0]); // Initial sliders
   const [entries, setEntries] = useState({}); // Entries for the table
@@ -63,7 +86,7 @@ const Dashboard = () => {
   const [address, setAddress] = useState('');
   const [name, setName] = useState('');
 
-  const [sliders, setSliders] = useState([0, 0, 0]);
+  const [sliders, setSliders] = useState({"Size":0, "Typology":0, "Price":0,"Coziness":0});
   const [maxs, setMaxs] = useState([0, 0, 0, 0]);
   const [currentEntry, setCurrentEntry] = useState(null); // For both adding and editing
   const [isEditing, setIsEditing] = useState(false);
@@ -72,11 +95,11 @@ const Dashboard = () => {
   const saveUserData = async (updatedData) => {
     if (currentUser) {
       try {
-        const userDocRef = doc(db, "users", currentUser.uid);
+        const userDocRef = doc(db, "users_entries", currentUser.uid);
 
         // Set the document with merge: true to update only specified fields or create if doesn't exist
 
-        await updateDoc(userDocRef, updatedData);
+        await updateDoc(userDocRef, updatedData, { merge: true });
         console.log("User data updated or created successfully!");
       } catch (error) {
         console.error("Error updating or creating user data:", error.message);
@@ -88,14 +111,11 @@ const Dashboard = () => {
   const delUserData = async (document, key) => {
     if (currentUser) {
       try {
-        const userDocRef = doc(db, document, currentUser.uid);
+        const docRef = doc(db, `users_${document}/${currentUser.uid}/entries/${key}`);
 
-        updateDoc(userDocRef, {
-          [key]: deleteField(),
-        });
-
+        await deleteDoc(docRef);
       } catch (error) {
-        console.error("Error deleting user data:", error.message);
+        console.error("Error deleting document:", error);
       }
     } else {
       console.error("No current user found");
@@ -117,12 +137,13 @@ const Dashboard = () => {
     }
     setIsNewPointOpen(true);
   };
-  const add_update_place = async (collectionPath, documentId, data) =>{
+  const add_update_place = async (collectionPath, documentId, data) => {
     const docRef = doc(db, collectionPath, documentId);
     const docSnap = await getDoc(docRef);
 
+
     if (!docSnap.exists()) {
-      await setDoc(docRef, {"geoloc":[0,0]});
+      await setDoc(docRef, { "geoloc": [0, 0] });
     }
 
     let path = "users_";
@@ -132,8 +153,20 @@ const Dashboard = () => {
       path = path + "poi";
 
     const userdocRef = doc(db, path, currentUser.uid);
+    const userdocSnap = await getDoc(userdocRef);
+    
+    if (!userdocSnap.exists() || !userdocSnap.data().maxs) {
+      const maxDefaults = { "entries": { "Size": data.info.Size, "Typology": data.info.Typology, "Price": data.info.Price, "Coziness": 0 }, "pointsOfInterest": { "walking": 0, "transport": 0, "car": 0 } };
+      const bestDefaults = { "entries": { "Size": data.info.Size, "Typology": data.info.Typology, "Price": data.info.Price, "Coziness": 0 }, "pointsOfInterest": { "walking": 0, "transport": 0, "car": 0 } };
 
-    await setDoc(userdocRef, {[documentId]:data}, {merge:true} );
+      await setDoc(userdocRef, { "stats": bestDefaults[collectionPath] }, { merge: true });
+      await setDoc(userdocRef, { "maxs": maxDefaults[collectionPath] }, { merge: true });
+
+    }
+    const subCollectionRef = collection(userdocRef, collectionPath); // Sub-collection named as `collectionPath`
+    const subDocRef = doc(subCollectionRef, documentId);
+
+    await setDoc(subDocRef, data, { merge: true });
 
   };
   // Save point of interest
@@ -154,14 +187,14 @@ const Dashboard = () => {
       let updatedPointsOfInterest = { ...pointsOfInterest };  // Create a new object
       delete updatedPointsOfInterest[currentPoint];  // Remove point
       setPointsOfInterest(updatedPointsOfInterest);  // Update state
-      delUserData("users_poi", currentPoint)
+      delUserData("users_pointsOfInterest", currentPoint)
     }
     setIsNewPointOpen(false);
   };
-  
+
   // Function to handle slider value change
   const handleSliderChange = (index, value) => {
-    const updatedSliders = [...sliderValues];
+    const updatedSliders = {...sliderValues};
     updatedSliders[index] = value;
     setSliderValues(updatedSliders);
     saveUserData({ sliderValues: updatedSliders });
@@ -186,6 +219,7 @@ const Dashboard = () => {
   };*/
 
   const renderTableHeaders = () => {
+
     const baseHeaders = [
       'Link',
       'Address',
@@ -194,7 +228,7 @@ const Dashboard = () => {
       'Typology',
       'Size',
     ];
-  
+
     // First header row with only point of interest names and addresses
     const interestPointHeaders = Object.entries(pointsOfInterest).map(([point, value], index) => (
       <th key={index} colSpan="3" style={{ textAlign: 'center' }}>
@@ -202,14 +236,14 @@ const Dashboard = () => {
         <span style={{ fontSize: 'smaller', color: 'grey' }}>{point}</span>
       </th>
     ));
-  
+
     // Second header row with base headers and repeated distance headers
     const distanceHeaders = Object.entries(pointsOfInterest).flatMap(() => [
       'Walking Duration',
       'Driving Duration',
       'Transport Duration',
     ]);
-  
+
     return (
       <React.Fragment>
         {/* First row: Point of interest names and addresses */}
@@ -218,7 +252,7 @@ const Dashboard = () => {
           {interestPointHeaders}
           <th colSpan={1} /> {/* Empty cell for 'Score' column */}
         </tr>
-  
+
         {/* Second row: Base headers and repeated distance headers */}
         <tr>
           {baseHeaders.map((header, index) => (
@@ -240,57 +274,76 @@ const Dashboard = () => {
       </React.Fragment>
     );
   };
-  
+
 
   const renderTableRows = () => {
-    return Object.entries(entries).map(([link, entry], rowIndex) => {
+    if (currentUser) {
+      updateUserData();
+      return Object.entries(entries).map(([link, entry], rowIndex) => {
+        let score = 0;
+        for (const [field, value] of Object.entries({"Price":entry.info["Price"],"Size":entry.info["Size"],"Typology":entry.info["Typology"]})) {
+          if(field === "Price")
+          {
+            //console.log(field, userMaxs[field]-value, userMaxs[field] - userStats[field])
+            score = score + (userMaxs[field] !== userStats[field] ?  ((userMaxs[field]-value)*sliderValues[field])/(userMaxs[field] - userStats[field]) : 0);
+          }
+          else
+          {
+            //console.log(field, value-userMaxs[field], userMaxs[field] - userStats[field])
+            score = score + (userMaxs[field] !== userStats[field] ?  ((value-userMaxs[field])*sliderValues[field])/(userStats[field]-userMaxs[field]) : 0);
+          }
+        }
 
-      // Generate the data cells for the base headers
-      const baseDataCells = [
-        <td key="link"><a href={link} target="_blank" rel="noopener noreferrer">{entry.info.Link} </a> </td>,
-        <td key="address">{entry.info.Address}</td>,
-        <td key="description">{entry.info.Description}</td>,
-        <td key="price">{entry.info.Price}</td>,
-        <td key="typology">{entry.info.Typology}</td>,
-        <td key="sqMeters">{entry.info.Size}</td>,
-      ];
-
-      // Generate the distance data cells for each point of interest
-      const interestPointDataCells = Object.entries(pointsOfInterest).map(([link, point], index) => {
-        return [
-          <td key={`walking-${index}`} style={{ textAlign: 'center' }}>
-            {point.importance[0] ? `${point.importance[0]} mins` : '-'}
-          </td>,
-          <td key={`driving-${index}`} style={{ textAlign: 'center' }}>
-            {point.importance[1] ? `${point.importance[1]} mins` : '-'}
-          </td>,
-          <td key={`transport-${index}`} style={{ textAlign: 'center' }}>
-            {point.importance[2] ? `${point.importance[2]} mins` : '-'}
-          </td>
+        // Generate the data cells for the base headers
+        const baseDataCells = [
+          <td key="link"><a href={link} target="_blank" rel="noopener noreferrer">{entry.info.Link} </a> </td>,
+          <td key="address">{entry.info.Address}</td>,
+          <td key="description">{entry.info.Description}</td>,
+          <td key="price">{entry.info.Price}</td>,
+          <td key="typology">{entry.info.Typology}</td>,
+          <td key="sqMeters">{entry.info.Size}</td>,
         ];
-      });      
 
-      return (
-        <tr
-          key={rowIndex}
-          onClick={() => openEditEntryModal(entry)}
-          style={{ cursor: 'pointer', backgroundColor: rowIndex % 2 === 0 ? '#f9f9f9' : '#fff' }} // Alternating row colors
-        >
-          {baseDataCells}
-          {interestPointDataCells}
-          <td>{entry.Score}</td>
-        </tr>
-      );
-    });
+        // Generate the distance data cells for each point of interest
+        const interestPointDataCells = Object.entries(pointsOfInterest).map(([link, point], index) => {
+          return [
+            <td key={`walking-${index}`} style={{ textAlign: 'center' }}>
+              {point.importance[0] ? `${point.importance[0]} mins` : '-'}
+            </td>,
+            <td key={`driving-${index}`} style={{ textAlign: 'center' }}>
+              {point.importance[1] ? `${point.importance[1]} mins` : '-'}
+            </td>,
+            <td key={`transport-${index}`} style={{ textAlign: 'center' }}>
+              {point.importance[2] ? `${point.importance[2]} mins` : '-'}
+            </td>
+          ];
+        });
+
+        return (
+          <tr
+            key={rowIndex}
+            onClick={() => openEditEntryModal(entry)}
+            style={{ cursor: 'pointer', backgroundColor: rowIndex % 2 === 0 ? '#f9f9f9' : '#fff' }} // Alternating row colors
+          >
+            {baseDataCells}
+            {interestPointDataCells}
+            <td>{score}</td>
+          </tr>
+        );
+      });
+
+    }
+    else
+      return;
   };
 
   const handleDeleteEntry = () => {
     //if (!currentEntry) return; // Exit the function if currentEntry is null or undefined
-    delete entries[currentEntry.Adress];
+    delete entries[currentEntry.info.Address];
     setEntries(entries); // Update the entries array
     setCurrentEntry(null); // Reset current entry after deletion
     setIsNewHouseOpen(false); // Close the modal after deletion
-    delUserData("users_entries", currentEntry.Address)
+    delUserData("entries", currentEntry.info.Address)
   };
 
   const openAddEntryModal = () => {
@@ -301,21 +354,23 @@ const Dashboard = () => {
 
   // Open modal for editing an entry, ensuring `currentEntry` is defined
   const openEditEntryModal = (entry) => {
-    console.log(entries)
-    setCurrentEntry(entry || { Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Score: 0 });
+    setCurrentEntry(entry || { "info": { Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Score: 0 } });
     setIsEditing(true);
     setIsNewHouseOpen(true);
   };
 
   // Update function for input fields in the modal
   const handleNewEntryChange = (field, value) => {
-    setCurrentEntry(prev => ({ ...prev, [field]: value }));
+    if (field === "Address" || field === "Link" || field === "Description")
+      setCurrentEntry(prev => ({ ...prev, "info": { ...prev.info, [field]: value } }));
+    else
+      setCurrentEntry(prev => ({ ...prev, "info": { ...prev.info, [field]: Number(value) } }));
   };
 
   const saveOrUpdateEntry = () => {
     if (currentEntry) {
-        entries[currentEntry.Adress] = {"info":currentEntry, "scores": {"Link":0, "Address":0, "Description":0 , "Price":0 ,"Typology":0,"Size":0}};
-        add_update_place("entries", currentEntry.Address, {"info":currentEntry, "scores": {"Link":0, "Address":0, "Description":0 , "Price":0 ,"Typology":0,"Size":0}})
+      entries[currentEntry.info.Address] = { "info": currentEntry.info, "scores": { "Price": 0, "Typology": 0, "Size": 0 } };
+      add_update_place("entries", currentEntry.info.Address, { "info": currentEntry.info, "scores": { "Price": 0, "Typology": 0, "Size": 0 } })
     }
     setIsNewHouseOpen(false); // Close the modal
   };
@@ -330,12 +385,12 @@ const Dashboard = () => {
         {/* Sliders Section */}
         <div className="slider-container">
           <Typography variant="h6">Importance</Typography>
-          {[...["Price", "Squared Meter area", "Tipology", "Coziness"]].map((name, i) => (
+          {[...["Price", "Size", "Typology", "Coziness"]].map((name, i) => (
             <div key={i}>
               <Typography>{name}</Typography>
               <Slider
-                value={sliderValues[i]}
-                onChange={(e, newValue) => handleSliderChange(i, newValue)}
+                value={sliderValues[name] !== undefined ? sliderValues[name] : 0}
+                onChange={(e, newValue) => handleSliderChange(name, newValue)}
                 min={0}
                 max={5}
                 step={1}
@@ -445,7 +500,7 @@ const Dashboard = () => {
             <TextField
               key={field}
               label={field}
-              value={(currentEntry && currentEntry[field]) || ''} // Show currentEntry values
+              value={(currentEntry && currentEntry.info && currentEntry.info[field]) || ''} // Show currentEntry values
               disabled={isEditing && (field === "Link" || field === "Address")}
               onChange={(e) => handleNewEntryChange(field, e.target.value)}
               fullWidth
