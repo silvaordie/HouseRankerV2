@@ -54,7 +54,7 @@ const Dashboard = () => {
         const querySnapshot = await getDocs(collectionRef);
         const jsonResult = {};
         querySnapshot.forEach((doc) => {
-          jsonResult[doc.id] = doc.data();
+          jsonResult[doc.id] = {"info":doc.data()};
         });
         setEntries(jsonResult || {});
 
@@ -68,6 +68,7 @@ const Dashboard = () => {
         console.error("Error fetching user data:", error.message);
       } finally {
       }
+
     }
   }, [currentUser]);
 
@@ -141,7 +142,6 @@ const Dashboard = () => {
     const docRef = doc(db, collectionPath, documentId);
     const docSnap = await getDoc(docRef);
 
-
     if (!docSnap.exists()) {
       await setDoc(docRef, { "geoloc": [0, 0] });
     }
@@ -156,8 +156,8 @@ const Dashboard = () => {
     const userdocSnap = await getDoc(userdocRef);
 
     if (collectionPath === "entries" && (!userdocSnap.exists() || !userdocSnap.data().maxs)) {
-      const maxDefaults = { "entries": { "Size": data.info.Size, "Typology": data.info.Typology, "Price": data.info.Price, "Coziness": 0 }, "pointsOfInterest": { "walking": 0, "transport": 0, "car": 0 } };
-      const bestDefaults = { "entries": { "Size": data.info.Size, "Typology": data.info.Typology, "Price": data.info.Price, "Coziness": 0 }, "pointsOfInterest": { "walking": 0, "transport": 0, "car": 0 } };
+      const maxDefaults = { "entries": { "Size": data.Size, "Typology": data.Typology, "Price": data.Price, "Coziness": 0 }, "pointsOfInterest": { "walking": 0, "transport": 0, "car": 0 } };
+      const bestDefaults = { "entries": { "Size": data.Size, "Typology": data.Typology, "Price": data.Price, "Coziness": 0 }, "pointsOfInterest": { "walking": 0, "transport": 0, "car": 0 } };
 
       await setDoc(userdocRef, { "stats": bestDefaults[collectionPath] }, { merge: true });
       await setDoc(userdocRef, { "maxs": maxDefaults[collectionPath] }, { merge: true });
@@ -290,6 +290,7 @@ const Dashboard = () => {
             //console.log(field, value-userMaxs[field], userMaxs[field] - userStats[field])
             score = score + (userMaxs[field] !== userStats[field] ? ((value - userMaxs[field]) * sliderValues[field]) / (userStats[field] - userMaxs[field]) : 0);
           }
+          entry["score"]= score;
         }
 
         // Generate the data cells for the base headers
@@ -346,14 +347,14 @@ const Dashboard = () => {
   };
 
   const openAddEntryModal = () => {
-    setCurrentEntry({ Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Score: 0 });
+    setCurrentEntry({ Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Coziness:''});
     setIsEditing(false);
     setIsNewHouseOpen(true);
   };
 
   // Open modal for editing an entry, ensuring `currentEntry` is defined
   const openEditEntryModal = (entry) => {
-    setCurrentEntry(entry || { "info": { Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Score: 0 } });
+    setCurrentEntry(entry || { Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Coziness:''} );
     setIsEditing(true);
     setIsNewHouseOpen(true);
   };
@@ -361,16 +362,16 @@ const Dashboard = () => {
   // Update function for input fields in the modal
   const handleNewEntryChange = (field, value) => {
     if (field === "Address" || field === "Link" || field === "Description")
-      setCurrentEntry(prev => ({ ...prev, "info": { ...prev.info, [field]: value } }));
+      setCurrentEntry(prev => ({ ...prev, [field]: value  }));
     else
       if( field !== "Coziness" || (field === "Coziness" && Number(value) >= 0 && Number(value) <= 5))
-        setCurrentEntry(prev => ({ ...prev, "info": { ...prev.info, [field]: Number(value) } }));
+        setCurrentEntry(prev => ({ ...prev, [field]: Number(value) }));
   };
 
   const saveOrUpdateEntry = () => {
     if (currentEntry) {
-      entries[currentEntry.info.Address] = { "info": currentEntry.info, "scores": { "Price": 0, "Typology": 0, "Size": 0 } };
-      add_update_place("entries", currentEntry.info.Address, { "info": currentEntry.info, "scores": { "Price": 0, "Typology": 0, "Size": 0 } })
+      entries[currentEntry.Address] = {"info":currentEntry, "score": entries[currentEntry.Address] ? entries[currentEntry.Address].score : 0};
+      add_update_place("entries", currentEntry.Address, currentEntry)
     }
     setIsNewHouseOpen(false); // Close the modal
   };
@@ -524,7 +525,7 @@ const Dashboard = () => {
             <TextField
               key={field}
               label={field}
-              value={(currentEntry && currentEntry.info && currentEntry.info[field]) || ''} // Show currentEntry values
+              value={(currentEntry && currentEntry && currentEntry[field]) || ''} // Show currentEntry values
               disabled={isEditing && (field === "Link" || field === "Address")}
               onChange={(e) => handleNewEntryChange(field, e.target.value)}
               fullWidth

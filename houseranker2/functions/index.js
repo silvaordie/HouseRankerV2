@@ -24,15 +24,15 @@ const recalculateMaxsAndStats = async (userId, field) => {
   entriesSnap.forEach((doc) => {
 
     const entry = doc.data();
-      if (entry.info[field] !== undefined) {
+      if (entry[field] !== undefined) {
         // Update maximum
-        newMaxs[field] = Math.max(newMaxs[field] || 0, entry.info[field]);
+        newMaxs[field] = Math.max(newMaxs[field] || 0, entry[field]);
 
         // Update minimum
         if (newStats[field] === undefined) {
-          newStats[field] = entry.info[field];
+          newStats[field] = entry[field];
         } else {
-          newStats[field] = Math.min(newStats[field], entry.info[field]);
+          newStats[field] = Math.min(newStats[field], entry[field]);
         }
       }
   });
@@ -46,11 +46,10 @@ const recalculateMaxsAndStats = async (userId, field) => {
 exports.myfunction = onDocumentWritten("users_entries/{userId}/entries/{entryId}", async (event) => {
   const previousData = event.data.before ? event.data.before.data() : null;
   const data = event.data.after ? event.data.after.data() : null;
-  const maxConverter = {"Size":-1, "Typology":-1, "Price":1, "Coziness":-1}
+  const maxConverter = {"Size":-1, "Typology":-1, "Price":1}
   let changed = false;
   let userData;
   let userDocRef
-  const newScores = {};
 
   if(!data)
   {
@@ -58,8 +57,8 @@ exports.myfunction = onDocumentWritten("users_entries/{userId}/entries/{entryId}
     const userDoc = await userDocRef.get(); // Admin SDK uses `.get()` instead of `getDoc`
     userData = userDoc.data();
 
-    for (const [field, value] of Object.entries(previousData.info)) {
-      if(previousData.info[field] === userData.stats[field] || previousData.info[field] === userData.maxs[field])
+    for (const [field, value] of Object.entries(previousData)) {
+      if(previousData[field] === userData.stats[field] || previousData[field] === userData.maxs[field])
       {
         recalculateMaxsAndStats(event.params.userId, field);
       }
@@ -67,10 +66,9 @@ exports.myfunction = onDocumentWritten("users_entries/{userId}/entries/{entryId}
     return;
   }
  
-  for (const [field, value] of Object.entries(data.info)) {
+  for (const [field, value] of Object.entries(data)) {
 
-      if ((!previousData || value !== previousData.info[field]) && (field !== "Address" && field !== "Link" && field !== "Description") && data ) {
-      
+      if ((!previousData || value !== previousData[field]) && (field !== "Coziness" && field !== "Address" && field !== "Link" && field !== "Description") && data ) {
         if (!changed) {
           changed = true;
           userDocRef = db.collection("users_entries").doc(event.params.userId);
@@ -97,18 +95,11 @@ exports.myfunction = onDocumentWritten("users_entries/{userId}/entries/{entryId}
             }
             else
             {
-              if(previousData && (previousData.info[field] === userData.stats[field] || previousData.info[field] === userData.maxs[field]))
+              if(previousData && (previousData[field] === userData.stats[field] || previousData[field] === userData.maxs[field]))
                 recalculateMaxsAndStats(event.params.userId, field);
             }
           }
-          newScores[field] = value;
       }
-  }
-  if(changed)
-  {
-    await event.data.after.ref.set({
-      scores: newScores
-    }, { merge: true });
   }
 });
 
