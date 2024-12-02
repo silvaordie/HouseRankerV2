@@ -19,25 +19,25 @@ import { useAuth } from "./AuthContext"; // Import your custom auth hook/context
 const Dashboard = () => {
   //const navigate = useNavigate();
   const { currentUser } = useAuth(); // Access currentUser directly from context
-  const [userStats, setUserStats] =useState({});
+  const [userStats, setUserStats] = useState({});
   const [userMaxs, setUserMaxs] = useState({});
 
-  const updateUserData = useCallback(async () => {
+  const updateUserData = async () => {
     if (currentUser) { // Ensure currentUser is defined
 
       try {
         const userDocRef = doc(db, "users_entries", currentUser.uid); // Reference to the user's document
         const userDoc = await getDoc(userDocRef); // Fetch the document
         let data = userDoc.data();
-        setSliderValues(data.sliderValues || {"Size":0, "Typology":0, "Price":0,"Coziness":0});
+        setSliderValues(data.sliderValues || { "Size": 0, "Typology": 0, "Price": 0, "Coziness": 0 });
         setUserMaxs(data.maxs || {});
         setUserStats(data.stats || {});
-      }catch (error) {
+      } catch (error) {
         console.error("Error fetching user data:", error.message);
       } finally {
       }
     }
-  });
+  };
 
   const fetchData = useCallback(async () => {
     if (currentUser) { // Ensure currentUser is defined
@@ -46,7 +46,7 @@ const Dashboard = () => {
         const userDocRef = doc(db, "users_entries", currentUser.uid); // Reference to the user's document
         const userDoc = await getDoc(userDocRef); // Fetch the document
         let data = userDoc.data();
-        setSliderValues(data.sliderValues || {"Size":0, "Typology":0, "Price":0,"Coziness":0});
+        setSliderValues(data.sliderValues || { "Size": 0, "Typology": 0, "Price": 0, "Coziness": 0 });
         setUserMaxs(data.maxs || {});
         setUserStats(data.stats || {});
 
@@ -86,7 +86,7 @@ const Dashboard = () => {
   const [address, setAddress] = useState('');
   const [name, setName] = useState('');
 
-  const [sliders, setSliders] = useState({"Size":0, "Typology":0, "Price":0,"Coziness":0});
+  const [sliders, setSliders] = useState({ "Size": 0, "Typology": 0, "Price": 0, "Coziness": 0 });
   const [maxs, setMaxs] = useState([0, 0, 0, 0]);
   const [currentEntry, setCurrentEntry] = useState(null); // For both adding and editing
   const [isEditing, setIsEditing] = useState(false);
@@ -154,14 +154,13 @@ const Dashboard = () => {
 
     const userdocRef = doc(db, path, currentUser.uid);
     const userdocSnap = await getDoc(userdocRef);
-    
-    if (!userdocSnap.exists() || !userdocSnap.data().maxs) {
+
+    if (collectionPath === "entries" && (!userdocSnap.exists() || !userdocSnap.data().maxs)) {
       const maxDefaults = { "entries": { "Size": data.info.Size, "Typology": data.info.Typology, "Price": data.info.Price, "Coziness": 0 }, "pointsOfInterest": { "walking": 0, "transport": 0, "car": 0 } };
       const bestDefaults = { "entries": { "Size": data.info.Size, "Typology": data.info.Typology, "Price": data.info.Price, "Coziness": 0 }, "pointsOfInterest": { "walking": 0, "transport": 0, "car": 0 } };
 
       await setDoc(userdocRef, { "stats": bestDefaults[collectionPath] }, { merge: true });
       await setDoc(userdocRef, { "maxs": maxDefaults[collectionPath] }, { merge: true });
-
     }
     const subCollectionRef = collection(userdocRef, collectionPath); // Sub-collection named as `collectionPath`
     const subDocRef = doc(subCollectionRef, documentId);
@@ -194,7 +193,7 @@ const Dashboard = () => {
 
   // Function to handle slider value change
   const handleSliderChange = (index, value) => {
-    const updatedSliders = {...sliderValues};
+    const updatedSliders = { ...sliderValues };
     updatedSliders[index] = value;
     setSliderValues(updatedSliders);
     saveUserData({ sliderValues: updatedSliders });
@@ -227,6 +226,7 @@ const Dashboard = () => {
       'Price',
       'Typology',
       'Size',
+      'Coziness'
     ];
 
     // First header row with only point of interest names and addresses
@@ -281,16 +281,14 @@ const Dashboard = () => {
       updateUserData();
       return Object.entries(entries).map(([link, entry], rowIndex) => {
         let score = 0;
-        for (const [field, value] of Object.entries({"Price":entry.info["Price"],"Size":entry.info["Size"],"Typology":entry.info["Typology"]})) {
-          if(field === "Price")
-          {
+        for (const [field, value] of Object.entries({ "Price": entry.info["Price"], "Size": entry.info["Size"], "Typology": entry.info["Typology"], "Coziness":entry.info["Coziness"] ? entry.info["Coziness"] :0  })) {
+          if (field === "Price") {
             //console.log(field, userMaxs[field]-value, userMaxs[field] - userStats[field])
-            score = score + (userMaxs[field] !== userStats[field] ?  ((userMaxs[field]-value)*sliderValues[field])/(userMaxs[field] - userStats[field]) : 0);
+            score = score + (userMaxs[field] !== userStats[field] ? ((userMaxs[field] - value) * sliderValues[field]) / (userMaxs[field] - userStats[field]) : 0);
           }
-          else
-          {
+          else {
             //console.log(field, value-userMaxs[field], userMaxs[field] - userStats[field])
-            score = score + (userMaxs[field] !== userStats[field] ?  ((value-userMaxs[field])*sliderValues[field])/(userStats[field]-userMaxs[field]) : 0);
+            score = score + (userMaxs[field] !== userStats[field] ? ((value - userMaxs[field]) * sliderValues[field]) / (userStats[field] - userMaxs[field]) : 0);
           }
         }
 
@@ -302,6 +300,7 @@ const Dashboard = () => {
           <td key="price">{entry.info.Price}</td>,
           <td key="typology">{entry.info.Typology}</td>,
           <td key="sqMeters">{entry.info.Size}</td>,
+          <td key="coziness">{entry.info.Coziness}</td>,
         ];
 
         // Generate the distance data cells for each point of interest
@@ -364,7 +363,8 @@ const Dashboard = () => {
     if (field === "Address" || field === "Link" || field === "Description")
       setCurrentEntry(prev => ({ ...prev, "info": { ...prev.info, [field]: value } }));
     else
-      setCurrentEntry(prev => ({ ...prev, "info": { ...prev.info, [field]: Number(value) } }));
+      if( field !== "Coziness" || (field === "Coziness" && Number(value) >= 0 && Number(value) <= 5))
+        setCurrentEntry(prev => ({ ...prev, "info": { ...prev.info, [field]: Number(value) } }));
   };
 
   const saveOrUpdateEntry = () => {
@@ -384,11 +384,21 @@ const Dashboard = () => {
 
         {/* Sliders Section */}
         <div className="slider-container">
-          <Typography variant="h6">Importance</Typography>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+    <Typography variant="h6">Importance</Typography>
+    <Typography
+      variant="body2"
+      style={{ fontWeight: 'bold', fontSize: '0.875rem', color: '#555', marginRight: '5%' }}
+    >
+      Max
+    </Typography>
+  </div>
+
           {[...["Price", "Size", "Typology", "Coziness"]].map((name, i) => (
-            <div key={i}>
-              <Typography>{name}</Typography>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+              <Typography style={{ marginRight: '16px', minWidth: '80px' }}>{name}</Typography>
               <Slider
+                style={{ flex: 1 }}
                 value={sliderValues[name] !== undefined ? sliderValues[name] : 0}
                 onChange={(e, newValue) => handleSliderChange(name, newValue)}
                 min={0}
@@ -396,9 +406,23 @@ const Dashboard = () => {
                 step={1}
                 marks
               />
+              <input
+                type="number"
+                style={{
+                  width: '60px',
+                  marginLeft: '16px',
+                  transform: 'scale(0.8, 0.8)', // Reduces height by 60%
+                  transformOrigin: 'center', // Keeps the input centered
+                  padding: '4px 2px', // Adjusts padding for better alignment
+                }}
+                value={sliderValues[name] !== undefined ? sliderValues[name] : 0}
+                onChange={(e) => handleSliderChange(name, parseInt(e.target.value) || 0)}
+              />
             </div>
           ))}
         </div>
+
+
 
         <div className="list-map-container">
           {/* List Section */}
@@ -496,7 +520,7 @@ const Dashboard = () => {
       <Modal open={isNewHouseOpen} onClose={() => setIsNewHouseOpen(false)}>
         <Box className="modal-box" style={{ display: 'flex', flexDirection: 'column' }}>
           <Typography variant="h6">{isEditing ? 'Edit Entry' : 'Add New Entry'}</Typography>
-          {['Link', 'Address', 'Description', 'Typology', 'Size', 'Price'].map(field => (
+          {['Link', 'Address', 'Description', 'Typology', 'Size', 'Price', 'Coziness'].map(field => (
             <TextField
               key={field}
               label={field}
