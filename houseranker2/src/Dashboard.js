@@ -15,12 +15,15 @@ import '@fortawesome/fontawesome-free/css/all.min.css';
 import { db } from "./firebase"; // Import the Firestore instance
 import { updateDoc, doc, getDoc, setDoc, collection, getDocs, deleteDoc } from "firebase/firestore"; // Import Firestore functions
 import { useAuth } from "./AuthContext"; // Import your custom auth hook/context provider
+import AddressSearch from "./AddressSearch";
+import MapComponent from './MapComponent';  // Import MapComponent
 
 const Dashboard = () => {
   //const navigate = useNavigate();
   const { currentUser } = useAuth(); // Access currentUser directly from context
   const [userStats, setUserStats] = useState({});
   const [userMaxs, setUserMaxs] = useState({});
+  const [importanceMaxs, setImportanceMaxs] = useState({});
 
   const updateUserData = async () => {
     if (currentUser) { // Ensure currentUser is defined
@@ -50,20 +53,26 @@ const Dashboard = () => {
         setUserMaxs(data.maxs || {});
         setUserStats(data.stats || {});
 
-        const collectionRef = collection(db, "users_entries/" + currentUser.uid + "/entries");
-        const querySnapshot = await getDocs(collectionRef);
-        const jsonResult = {};
-        querySnapshot.forEach((doc) => {
-          jsonResult[doc.id] = {"info":doc.data()};
-        });
-        setEntries(jsonResult || {});
+        ["entries", "pointsOfInterest"].forEach(async (typ) => {
+          const collectionRef = collection(db, `users_${typ}/${currentUser.uid}/${typ}`);
+          const querySnapshot = await getDocs(collectionRef);
+          let jsonResult = {};
 
-        const userPoisRef = doc(db, "users_poi", currentUser.uid)
-
-        const userPois = await getDoc(userPoisRef);
-        data = userPois.data();
-        setPointsOfInterest(data || {});
-
+          if(typ === "entries")
+          {
+            querySnapshot.forEach((doc) => {
+              jsonResult[doc.id] = { "info":doc.data()};
+            });
+            setEntries(jsonResult || {});
+          }
+          else
+          {
+            querySnapshot.forEach((doc) => {
+              jsonResult[doc.id] = doc.data();
+            });
+            setPointsOfInterest(jsonResult || {});
+          }
+        })
       } catch (error) {
         console.error("Error fetching user data:", error.message);
       } finally {
@@ -86,8 +95,9 @@ const Dashboard = () => {
 
   const [address, setAddress] = useState('');
   const [name, setName] = useState('');
-
+  const [geolocation, setGeolocation] = useState({ lat: null, lon: null });
   const [sliders, setSliders] = useState({ "Size": 0, "Typology": 0, "Price": 0, "Coziness": 0 });
+  const [poiSliders, setPoiSliders] = useState({"walking":0, "car":0, "transport":0});
   const [maxs, setMaxs] = useState([0, 0, 0, 0]);
   const [currentEntry, setCurrentEntry] = useState(null); // For both adding and editing
   const [isEditing, setIsEditing] = useState(false);
@@ -112,7 +122,7 @@ const Dashboard = () => {
   const delUserData = async (document, key) => {
     if (currentUser) {
       try {
-        const docRef = doc(db, `users_${document}/${currentUser.uid}/entries/${key}`);
+        const docRef = doc(db, `users_${document}/${currentUser.uid}/${document}/${key}`);
 
         await deleteDoc(docRef);
       } catch (error) {
@@ -127,13 +137,13 @@ const Dashboard = () => {
   const openModal = (point = null) => {
     if (point) {
       setAddress(point);
-      setSliders(pointsOfInterest[point].importance);
+      setPoiSliders(pointsOfInterest[point].importance);
       setName(pointsOfInterest[point].name);
       if (pointsOfInterest[point].maxs) { setMaxs(pointsOfInterest[point].maxs) }
       setCurrentPoint(point);
     } else {
       setAddress('');
-      setSliders([0, 0, 0]);
+      setPoiSliders({"walking":0, "car":0, "transport":0});
       setCurrentPoint(null);
     }
     setIsNewPointOpen(true);
@@ -143,15 +153,10 @@ const Dashboard = () => {
     const docSnap = await getDoc(docRef);
 
     if (!docSnap.exists()) {
-      await setDoc(docRef, { "geoloc": [0, 0] });
+      await setDoc(docRef, { "geoloc": [0, 0], "createdOn": new Date().toISOString() });
     }
 
-    let path = "users_";
-    if (collectionPath === "entries")
-      path = path + "entries";
-    else
-      path = path + "poi";
-
+    const path = "users_" + collectionPath;
     const userdocRef = doc(db, path, currentUser.uid);
     const userdocSnap = await getDoc(userdocRef);
 
@@ -170,7 +175,12 @@ const Dashboard = () => {
   };
   // Save point of interest
   const savePointOfInterest = () => {
-    const newPoint = { name, importance: sliders, maxs };
+    let newPoint = {};
+    if(currentPoint)
+      newPoint = { name, importance: poiSliders, maxs };
+    else
+      newPoint = { name, importance: poiSliders, maxs, geolocation };
+
     let updatedPointsOfInterest = { ...pointsOfInterest };  // Create a new object
 
     updatedPointsOfInterest[address] = newPoint;  // Edit existing point
@@ -178,6 +188,8 @@ const Dashboard = () => {
     setPointsOfInterest(updatedPointsOfInterest);  // Update state
     add_update_place("pointsOfInterest", address, newPoint);
     setIsNewPointOpen(false);
+    setCurrentPoint(null);
+    console.log(pointsOfInterest)
   };
 
   // Delete point of interest
@@ -185,8 +197,8 @@ const Dashboard = () => {
     if (currentPoint) {
       let updatedPointsOfInterest = { ...pointsOfInterest };  // Create a new object
       delete updatedPointsOfInterest[currentPoint];  // Remove point
-      setPointsOfInterest(updatedPointsOfInterest);  // Update state
-      delUserData("users_pointsOfInterest", currentPoint)
+      delUserData("pointsOfInterest", currentPoint);
+      setPointsOfInterest(updatedPointsOfInterest);
     }
     setIsNewPointOpen(false);
   };
@@ -243,7 +255,7 @@ const Dashboard = () => {
       'Driving Duration',
       'Transport Duration',
     ]);
-
+    const translation = {'Walking Duration':"walking", 'Driving Duration':"car", "Transport Duration": "transport"};
     return (
       <React.Fragment>
         {/* First row: Point of interest names and addresses */}
@@ -263,7 +275,7 @@ const Dashboard = () => {
           {distanceHeaders.map((header, index) => (
             <th key={index} style={{ textAlign: 'center' }}>
               <i
-                className={"fas fa-" + icons[index % 3]}
+                className={"fas fa-" + icons[translation[header]]}
                 style={{ marginRight: '5px' }}
                 title={header} // Updated to use the header for the title
               />
@@ -368,6 +380,11 @@ const Dashboard = () => {
         setCurrentEntry(prev => ({ ...prev, [field]: Number(value) }));
   };
 
+  const handleAddressChange = (newAddress, newGeolocation) => {
+    setAddress(newAddress);  // Save the address
+    setGeolocation(newGeolocation);  // Save the geolocation (latitude, longitude)
+  };
+
   const saveOrUpdateEntry = () => {
     if (currentEntry) {
       entries[currentEntry.Address] = {"info":currentEntry, "score": entries[currentEntry.Address] ? entries[currentEntry.Address].score : 0};
@@ -377,7 +394,9 @@ const Dashboard = () => {
   };
 
   const colors = ["#db284e", "#db284e", "#db8829", "#c9db29", "#4caf50", "#007bff"]
-  const icons = ["person-walking", "train", "car"]
+  const icons = {"walking":"person-walking", "transport":"train", "car":"car"}
+
+  
   return (
     <div className="dashboard-container">
       {/* Header Section */}
@@ -439,8 +458,8 @@ const Dashboard = () => {
                     <span className="point-address">{point}</span>
                   </div>
                   <div className="importance-indicators">
-                    {pointsOfInterest[point].importance.map((imp, i) => (
-                      <div key={i} className="importance-circle">
+                    {Object.entries(pointsOfInterest[point].importance).map(([typ, imp], index) => (
+                      <div key={index} className="importance-circle">
                         <svg viewBox="0 0 36 36" className="circular-chart orange">
                           <path
                             className="circle-bg"
@@ -456,7 +475,7 @@ const Dashboard = () => {
                           {/* Font Awesome icon inside foreignObject */}
                           <foreignObject x="9" y="9" width="18" height="18">
                             <i
-                              className={"fa fa-" + icons[i]}
+                              className={"fa fa-" + icons[typ]}
                               style={{
                                 color: colors[imp],
                                 fontSize: '12px',
@@ -468,7 +487,7 @@ const Dashboard = () => {
 
                           {/* Display the max value closer to the icon */}
                           <text x="18" y="26" textAnchor="middle" fill={colors[imp]} fontSize="6">
-                            {pointsOfInterest[point].maxs[i] || 0} mins
+                            {pointsOfInterest[point].maxs[index] || 0} mins
                           </text>
                         </svg>
                       </div>
@@ -487,9 +506,7 @@ const Dashboard = () => {
           {/* Map Section */}
           <div className="map-container">
             <Typography variant="h6" style={{ textAlign: 'center' }}></Typography>
-            <MapContainer center={[51.505, -0.09]} zoom={13} style={{ height: '100%', width: '100%' }}>
-              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            </MapContainer>
+            <MapComponent pointsOfInterest={pointsOfInterest} />
           </div>
         </div>
 
@@ -559,15 +576,14 @@ const Dashboard = () => {
             fullWidth
             margin="normal"
           />
-
-          <TextField
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            placeholder="Address"
-            disabled={currentPoint}
-            fullWidth
-            margin="normal"
+        <AddressSearch
+          key={"Address"}
+          label={"Address"}
+          value={address} // Show currentEntry values
+          disableInteraction={currentPoint}
+          onChange={handleAddressChange} // Pass both address and geolocation
           />
+
 
           {/* Slider and Max Input for Walking Distance */}
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
@@ -575,7 +591,7 @@ const Dashboard = () => {
               <Typography>Walking Distance Importance</Typography>
               <Slider
                 value={sliders[0]}
-                onChange={(e, v) => setSliders([v, sliders[1], sliders[2]])}
+                onChange={(e, v) => setPoiSliders({...poiSliders, "walking":v})}
                 min={0}
                 max={5}
                 step={1}
@@ -600,7 +616,7 @@ const Dashboard = () => {
               <Typography>Transport Distance Importance</Typography>
               <Slider
                 value={sliders[1]}
-                onChange={(e, v) => setSliders([sliders[0], v, sliders[2]])}
+                onChange={(e, v) => setSliders({...poiSliders, "transport":v})}
                 min={0}
                 max={5}
                 step={1}
@@ -622,7 +638,7 @@ const Dashboard = () => {
               <Typography>Driving Distance Importance</Typography>
               <Slider
                 value={sliders[2]}
-                onChange={(e, v) => setSliders([sliders[0], sliders[1], v])}
+                onChange={(e, v) => setSliders({...poiSliders, "car":v})}
                 min={0}
                 max={5}
                 step={1}
