@@ -68,7 +68,7 @@ exports.myfunction = onDocumentWritten("users_entries/{userId}/entries/{entryId}
 
   for (const [field, value] of Object.entries(data)) {
 
-    if ((!previousData || value !== previousData[field]) && (field !== "Coziness" && field !== "Address" && field !== "Link" && field !== "Description") && data) {
+    if ((!previousData || value !== previousData[field]) && (field !== "Address" && field !== "Link" && field !== "Description") && data) {
       if (!changed) {
         changed = true;
         userDocRef = db.collection("users_entries").doc(event.params.userId);
@@ -102,35 +102,30 @@ exports.myfunction = onDocumentWritten("users_entries/{userId}/entries/{entryId}
 });
 
 exports.calculateDistance = functions.https.onCall(async (data, context) => {
-  // Enable CORS
-  return new Promise((resolve, reject) => {
-    cors((req, res) => {
-      try {
-        const { entryId, poiId } = data;
+  try {
 
-        // Validate inputs
-        if (!entryId || !poiId) {
-          throw new functions.https.HttpsError(
-            'invalid-argument',
-            'Both entryId and poiId are required.'
-          );
-        }
+    const { entryId, poiId } = data.data; // Get data passed from the front-end
+    // Validate inputs
+    if (!entryId || !poiId) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Both entryId and poiId are required.'
+      );
+    }
 
-        // Example: Simulated calculation of distances
-        const response = {
-          walking: 233,
-          car: 244,
-          transport: 255,
-        };
+    // Example: Simulated calculation of distances
+    const response = {
+      walking: Math.floor(Math.random() * 45),
+      car: Math.floor(Math.random() * 45),
+      transport: Math.floor(Math.random() * 45)
+    };
 
-        // Resolve the Promise with the response (this sends it back to the client)
-        resolve(response);
-      } catch (error) {
-        console.error(error.message);
-        reject(new functions.https.HttpsError('internal', 'An error occurred while calculating distances.'));
-      }
-    })(data, context); // Pass the data and context to CORS middleware
-  });
+    // Return response
+    return response;
+  } catch (error) {
+    console.error(error.message);
+    throw new functions.https.HttpsError('internal', 'An error occurred while calculating distances.');
+  }
 });
 /*try {
   const docRef = db.collection(collectionName).doc(docId);

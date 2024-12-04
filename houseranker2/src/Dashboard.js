@@ -16,17 +16,34 @@ import { updateDoc, doc, getDoc, setDoc, collection, getDocs, deleteDoc } from "
 import { useAuth } from "./AuthContext"; // Import your custom auth hook/context provider
 import AddressSearch from "./AddressSearch";
 import MapComponent from './MapComponent';  // Import MapComponent
-import { getFunctions, httpsCallable } from "firebase/functions";
+import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/functions";
+//import { calculateDistance } from '../functions';
 
 const Dashboard = () => {
   //const navigate = useNavigate();
   const { currentUser } = useAuth(); // Access currentUser directly from context
   const [userStats, setUserStats] = useState({});
   const [userMaxs, setUserMaxs] = useState({});
+  const [sliderValues, setSliderValues] = useState([0, 0, 0, 0]); // Initial sliders
+  const [entries, setEntries] = useState({}); // Entries for the table
+  const [isNewHouseOpen, setIsNewHouseOpen] = useState(false); // Modal state for adding new entry
+
+  const [pointsOfInterest, setPointsOfInterest] = useState({});
+  const [isNewPointOpen, setIsNewPointOpen] = useState(false);
+  const [currentPoint, setCurrentPoint] = useState(null); // To track if editing an existing point
+
+  const [address, setAddress] = useState('');
+  const [name, setName] = useState('');
+  const [geolocation, setGeolocation] = useState({ lat: null, lon: null });
+  const [sliders, setSliders] = useState({ "Size": 0, "Typology": 0, "Price": 0, "Coziness": 0 });
+  const [poiSliders, setPoiSliders] = useState({ "walking": 0, "car": 0, "transport": 0 });
+  const [maxs, setMaxs] = useState([0, 0, 0, 0]);
+  const [currentEntry, setCurrentEntry] = useState(null); // For both adding and editing
+  const [isEditing, setIsEditing] = useState(false);
+  const [distances, setDistances] = useState({});
 
   const updateUserData = async () => {
     if (currentUser) { // Ensure currentUser is defined
-
       try {
         const userDocRef = doc(db, "users_entries", currentUser.uid); // Reference to the user's document
         const userDoc = await getDoc(userDocRef); // Fetch the document
@@ -40,9 +57,63 @@ const Dashboard = () => {
       }
     }
   };
+  useEffect(() => {
+    const getDistanceBetween = async (entryId, poiId, method) => {
+      const docRef = doc(db, "distances", entryId);
+      const docSnapshot = await getDoc(docRef);
+      
+      if (!docSnapshot.exists()) {
+        try {
+          await setDoc(docRef, {});
+        } catch (error) {
+          console.log(error.message);
+        }
+      }
+  
+      const docData = docSnapshot.data();
+  
+      if (docData && docData[poiId]) {
+        // When the data is already present in Firestore, update distances state correctly
+        setDistances(prevDistances => ({
+          ...prevDistances,
+          [entryId]: {
+            ...prevDistances[entryId],
+            [poiId]: docData[poiId],
+          },
+        }));
+      } else {
+        const functions = getFunctions(); // Get the functions instance
+        connectFunctionsEmulator(functions, "localhost", 5001);  // Make sure emulator is running
+        const checkPoint = httpsCallable(functions, "calculateDistance");
+  
+        const result = await checkPoint({ entryId, poiId });
+  
+        // When the result is fetched, update the distances state
+        setDistances(prevDistances => ({
+          ...prevDistances,
+          [entryId]: {
+            ...prevDistances[entryId],
+            [poiId]: result.data,
+          },
+        }));
+  
+        // Save the result to Firestore
+        await setDoc(docRef, { [poiId]: result.data }, { merge: true });
+      }
+    };
+  
+    // Iterate over entries and points of interest
+    Object.keys(entries).forEach(entryId => {
+      Object.keys(pointsOfInterest).forEach(poiId => {
+        getDistanceBetween(entryId, poiId);
+      });
+    });
+  }, [pointsOfInterest, entries]);
+  
 
   const fetchData = useCallback(async () => {
     if (currentUser) { // Ensure currentUser is defined
+      //const result = checkPoint({ entryId:"1", poiId:"37, Spalentorweg, Am Ring, Grossbasel, Basel, Basel-City, 4051, Switzerland" });
 
       try {
         const userDocRef = doc(db, "users_entries", currentUser.uid); // Reference to the user's document
@@ -81,7 +152,7 @@ const Dashboard = () => {
                   ...userPOIData,
                   geolocation: poiData.geoloc, // Include geolocation
                 };
-                
+
               } else {
                 console.warn(`POI with ID ${poiId} does not exist in the main collection.`);
               }
@@ -100,24 +171,6 @@ const Dashboard = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  const [sliderValues, setSliderValues] = useState([0, 0, 0, 0]); // Initial sliders
-  const [entries, setEntries] = useState({}); // Entries for the table
-  const [isNewHouseOpen, setIsNewHouseOpen] = useState(false); // Modal state for adding new entry
-
-  const [pointsOfInterest, setPointsOfInterest] = useState({});
-  const [isNewPointOpen, setIsNewPointOpen] = useState(false);
-  const [currentPoint, setCurrentPoint] = useState(null); // To track if editing an existing point
-
-  const [address, setAddress] = useState('');
-  const [name, setName] = useState('');
-  const [geolocation, setGeolocation] = useState({ lat: null, lon: null });
-  const [sliders, setSliders] = useState({ "Size": 0, "Typology": 0, "Price": 0, "Coziness": 0 });
-  const [poiSliders, setPoiSliders] = useState({ "walking": 0, "car": 0, "transport": 0 });
-  const [maxs, setMaxs] = useState([0, 0, 0, 0]);
-  const [currentEntry, setCurrentEntry] = useState(null); // For both adding and editing
-  const [isEditing, setIsEditing] = useState(false);
-  const [distances, setDistances] = useState({});
 
   const saveUserData = async (updatedData) => {
     if (currentUser) {
@@ -194,7 +247,7 @@ const Dashboard = () => {
     add_update_place("pointsOfInterest", address, newPoint);
 
     if (currentPoint)
-      newPoint = { name, importance: poiSliders, maxs, geolocation:pointsOfInterest[currentPoint].geolocation };
+      newPoint = { name, importance: poiSliders, maxs, geolocation: pointsOfInterest[currentPoint].geolocation };
     else
       newPoint = { name, importance: poiSliders, maxs, geolocation };
 
@@ -226,38 +279,11 @@ const Dashboard = () => {
   };
 
   // Function to handle slider value change
-  const getDistanceBetween = async (entryId, poiId, method) => {
-    const docRef = doc(db, "distances", entryId);
-    const docSnapshot = await getDoc(docRef);
+  const functions = getFunctions(); // Get the functions instance
+  connectFunctionsEmulator(functions, "localhost", 5001);
+  const checkPoint = httpsCallable(functions, "calculateDistance"); // Reference the Cloud Function
 
-    if (!docSnapshot.exists()) {
-      try{
-        await setDoc(docRef, {});
-      }
-      catch(error) {
-        //await signOut(auth)
-        console.log(error.message);
-      }
-    }
-
-    const docData = docSnapshot.data();
-
-    if (docData && docData[poiId]) {
-      const newDistances = {...distances, [entryId]:{...distances[entryId], [poiId]:docData[poiId]}}
-      setDistances(newDistances);
-    } else {
-      const functions = getFunctions(); // Get the functions instance
-      const checkPoint = httpsCallable(functions, "calculateDistance"); // Reference the Cloud Function
-
-      const result = await checkPoint({ entryId, poiId });
-
-      const newDistances = {...distances, [entryId]:{...distances[entryId], [poiId]:result}}
-      setDistances(newDistances);
-    }
-
-  };
-
-  /*  const addNewEntry = () => {
+  /*  const addNewE ntry = () => {
       const newEntries = [...entries, newEntry];
       setEntries(newEntries);
       setNewEntry({ Link: '', Description: '', Address: '', Typology: '', SqMeters: '', Price: '', Score: 0 });
@@ -338,7 +364,7 @@ const Dashboard = () => {
       updateUserData();
       return Object.entries(entries).map(([entryId, entry], rowIndex) => {
         let score = 0;
-        for (const [field, value] of Object.entries({ "Price": entry.info["Price"], "Size": entry.info["Size"], "Typology": entry.info["Typology"], "Coziness": entry.info["Coziness"] ? entry.info["Coziness"] : 0 })) {
+        for (const [field, value] of Object.entries({ "Price": entry.info["Price"], "Size": entry.info["Size"], "Typology": entry.info["Typology"], "Coziness": entry.info["Coziness"] })) {
           if (field === "Price") {
             //console.log(field, userMaxs[field]-value, userMaxs[field] - userStats[field])
             score = score + (userMaxs[field] !== userStats[field] ? ((userMaxs[field] - value) * sliderValues[field]) / (userMaxs[field] - userStats[field]) : 0);
@@ -363,18 +389,18 @@ const Dashboard = () => {
 
         // Generate the distance data cells for each point of interest
         const interestPointDataCells = Object.entries(pointsOfInterest).map(([pointId, point], index) => {
-          if(!distances[entryId])
-            distances[entryId]={};
+          if (!distances[entryId])
+            distances[entryId] = {};
           return [
             <td key={`walking-${index}`} style={{ textAlign: 'center' }}>
-              {distances[entryId][pointId] ? `${distances[entryId][pointId]["walking"]} mins` : `${getDistanceBetween(entryId, pointId, "walking")} mins`}
+              {distances[entryId][pointId] ? `${distances[entryId][pointId]["walking"]} mins` : `- mins`}
             </td>,
             <td key={`driving-${index}`} style={{ textAlign: 'center' }}>
-              {distances[entryId][pointId] ? `${distances[entryId][pointId]["car"]} mins` : `${getDistanceBetween(entryId, pointId, "car")} mins`}
-              </td>,
+              {distances[entryId][pointId] ? `${distances[entryId][pointId]["car"]} mins` : `- mins`}
+            </td>,
             <td key={`transport-${index}`} style={{ textAlign: 'center' }}>
-              {distances[entryId][pointId] ? `${distances[entryId][pointId]["transport"]} mins` : `${getDistanceBetween(entryId, pointId, "transport")} mins`}
-              </td>
+              {distances[entryId][pointId] ? `${distances[entryId][pointId]["transport"]} mins` : `- mins`}
+            </td>
           ];
         });
 
