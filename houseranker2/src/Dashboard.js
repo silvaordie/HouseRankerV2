@@ -6,7 +6,6 @@ import Slider from '@mui/material/Slider';
 import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
-import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import './Dashboard.css';
 //import { useNavigate } from 'react-router-dom';
@@ -17,13 +16,13 @@ import { updateDoc, doc, getDoc, setDoc, collection, getDocs, deleteDoc } from "
 import { useAuth } from "./AuthContext"; // Import your custom auth hook/context provider
 import AddressSearch from "./AddressSearch";
 import MapComponent from './MapComponent';  // Import MapComponent
+import { getFunctions, httpsCallable } from "firebase/functions";
 
 const Dashboard = () => {
   //const navigate = useNavigate();
   const { currentUser } = useAuth(); // Access currentUser directly from context
   const [userStats, setUserStats] = useState({});
   const [userMaxs, setUserMaxs] = useState({});
-  const [importanceMaxs, setImportanceMaxs] = useState({});
 
   const updateUserData = async () => {
     if (currentUser) { // Ensure currentUser is defined
@@ -58,18 +57,35 @@ const Dashboard = () => {
           const querySnapshot = await getDocs(collectionRef);
           let jsonResult = {};
 
-          if(typ === "entries")
-          {
+          if (typ === "entries") {
             querySnapshot.forEach((doc) => {
-              jsonResult[doc.id] = { "info":doc.data()};
+              jsonResult[doc.id] = { "info": doc.data() };
             });
             setEntries(jsonResult || {});
           }
-          else
-          {
-            querySnapshot.forEach((doc) => {
-              jsonResult[doc.id] = doc.data();
-            });
+          else {
+            const poiCollectionRef = collection(db, "pointsOfInterest");
+
+            for (const userPOIDoc of querySnapshot.docs) {
+              const poiId = userPOIDoc.id; // ID corresponds to the key in the main POI collection
+              const userPOIData = userPOIDoc.data();
+
+              // Fetch geolocation data from the main POI collection
+              const poiDocRef = doc(poiCollectionRef, poiId);
+              const poiDocSnapshot = await getDoc(poiDocRef);
+
+              if (poiDocSnapshot.exists()) {
+                const poiData = poiDocSnapshot.data();
+                // Merge user's POI data with the geolocation data
+                jsonResult[poiId] = {
+                  ...userPOIData,
+                  geolocation: poiData.geoloc, // Include geolocation
+                };
+                
+              } else {
+                console.warn(`POI with ID ${poiId} does not exist in the main collection.`);
+              }
+            }
             setPointsOfInterest(jsonResult || {});
           }
         })
@@ -97,11 +113,11 @@ const Dashboard = () => {
   const [name, setName] = useState('');
   const [geolocation, setGeolocation] = useState({ lat: null, lon: null });
   const [sliders, setSliders] = useState({ "Size": 0, "Typology": 0, "Price": 0, "Coziness": 0 });
-  const [poiSliders, setPoiSliders] = useState({"walking":0, "car":0, "transport":0});
+  const [poiSliders, setPoiSliders] = useState({ "walking": 0, "car": 0, "transport": 0 });
   const [maxs, setMaxs] = useState([0, 0, 0, 0]);
   const [currentEntry, setCurrentEntry] = useState(null); // For both adding and editing
   const [isEditing, setIsEditing] = useState(false);
-
+  const [distances, setDistances] = useState({});
 
   const saveUserData = async (updatedData) => {
     if (currentUser) {
@@ -132,7 +148,6 @@ const Dashboard = () => {
       console.error("No current user found");
     }
   };
-
   // Open modal for adding or editing
   const openModal = (point = null) => {
     if (point) {
@@ -143,7 +158,7 @@ const Dashboard = () => {
       setCurrentPoint(point);
     } else {
       setAddress('');
-      setPoiSliders({"walking":0, "car":0, "transport":0});
+      setPoiSliders({ "walking": 0, "car": 0, "transport": 0 });
       setCurrentPoint(null);
     }
     setIsNewPointOpen(true);
@@ -153,7 +168,7 @@ const Dashboard = () => {
     const docSnap = await getDoc(docRef);
 
     if (!docSnap.exists()) {
-      await setDoc(docRef, { "geoloc": [0, 0], "createdOn": new Date().toISOString() });
+      await setDoc(docRef, { "geoloc": geolocation, "createdOn": new Date().toISOString() });
     }
 
     const path = "users_" + collectionPath;
@@ -175,21 +190,20 @@ const Dashboard = () => {
   };
   // Save point of interest
   const savePointOfInterest = () => {
-    let newPoint = {};
-    if(currentPoint)
-      newPoint = { name, importance: poiSliders, maxs };
+    let newPoint = { name, importance: poiSliders, maxs };
+    add_update_place("pointsOfInterest", address, newPoint);
+
+    if (currentPoint)
+      newPoint = { name, importance: poiSliders, maxs, geolocation:pointsOfInterest[currentPoint].geolocation };
     else
       newPoint = { name, importance: poiSliders, maxs, geolocation };
 
     let updatedPointsOfInterest = { ...pointsOfInterest };  // Create a new object
-
     updatedPointsOfInterest[address] = newPoint;  // Edit existing point
-
     setPointsOfInterest(updatedPointsOfInterest);  // Update state
-    add_update_place("pointsOfInterest", address, newPoint);
+
     setIsNewPointOpen(false);
     setCurrentPoint(null);
-    console.log(pointsOfInterest)
   };
 
   // Delete point of interest
@@ -211,6 +225,37 @@ const Dashboard = () => {
     saveUserData({ sliderValues: updatedSliders });
   };
 
+  // Function to handle slider value change
+  const getDistanceBetween = async (entryId, poiId, method) => {
+    const docRef = doc(db, "distances", entryId);
+    const docSnapshot = await getDoc(docRef);
+
+    if (!docSnapshot.exists()) {
+      try{
+        await setDoc(docRef, {});
+      }
+      catch(error) {
+        //await signOut(auth)
+        console.log(error.message);
+      }
+    }
+
+    const docData = docSnapshot.data();
+
+    if (docData && docData[poiId]) {
+      const newDistances = {...distances, [entryId]:{...distances[entryId], [poiId]:docData[poiId]}}
+      setDistances(newDistances);
+    } else {
+      const functions = getFunctions(); // Get the functions instance
+      const checkPoint = httpsCallable(functions, "calculateDistance"); // Reference the Cloud Function
+
+      const result = await checkPoint({ entryId, poiId });
+
+      const newDistances = {...distances, [entryId]:{...distances[entryId], [poiId]:result}}
+      setDistances(newDistances);
+    }
+
+  };
 
   /*  const addNewEntry = () => {
       const newEntries = [...entries, newEntry];
@@ -255,7 +300,7 @@ const Dashboard = () => {
       'Driving Duration',
       'Transport Duration',
     ]);
-    const translation = {'Walking Duration':"walking", 'Driving Duration':"car", "Transport Duration": "transport"};
+    const translation = { 'Walking Duration': "walking", 'Driving Duration': "car", "Transport Duration": "transport" };
     return (
       <React.Fragment>
         {/* First row: Point of interest names and addresses */}
@@ -291,9 +336,9 @@ const Dashboard = () => {
   const renderTableRows = () => {
     if (currentUser) {
       updateUserData();
-      return Object.entries(entries).map(([link, entry], rowIndex) => {
+      return Object.entries(entries).map(([entryId, entry], rowIndex) => {
         let score = 0;
-        for (const [field, value] of Object.entries({ "Price": entry.info["Price"], "Size": entry.info["Size"], "Typology": entry.info["Typology"], "Coziness":entry.info["Coziness"] ? entry.info["Coziness"] :0  })) {
+        for (const [field, value] of Object.entries({ "Price": entry.info["Price"], "Size": entry.info["Size"], "Typology": entry.info["Typology"], "Coziness": entry.info["Coziness"] ? entry.info["Coziness"] : 0 })) {
           if (field === "Price") {
             //console.log(field, userMaxs[field]-value, userMaxs[field] - userStats[field])
             score = score + (userMaxs[field] !== userStats[field] ? ((userMaxs[field] - value) * sliderValues[field]) / (userMaxs[field] - userStats[field]) : 0);
@@ -302,12 +347,12 @@ const Dashboard = () => {
             //console.log(field, value-userMaxs[field], userMaxs[field] - userStats[field])
             score = score + (userMaxs[field] !== userStats[field] ? ((value - userMaxs[field]) * sliderValues[field]) / (userStats[field] - userMaxs[field]) : 0);
           }
-          entry["score"]= score;
+          entry["score"] = score;
         }
 
         // Generate the data cells for the base headers
         const baseDataCells = [
-          <td key="link"><a href={link} target="_blank" rel="noopener noreferrer">{entry.info.Link} </a> </td>,
+          <td key="link"><a href={entry.info.Link} target="_blank" rel="noopener noreferrer">{entry.info.Link} </a> </td>,
           <td key="address">{entry.info.Address}</td>,
           <td key="description">{entry.info.Description}</td>,
           <td key="price">{entry.info.Price}</td>,
@@ -317,17 +362,19 @@ const Dashboard = () => {
         ];
 
         // Generate the distance data cells for each point of interest
-        const interestPointDataCells = Object.entries(pointsOfInterest).map(([link, point], index) => {
+        const interestPointDataCells = Object.entries(pointsOfInterest).map(([pointId, point], index) => {
+          if(!distances[entryId])
+            distances[entryId]={};
           return [
             <td key={`walking-${index}`} style={{ textAlign: 'center' }}>
-              {point.importance[0] ? `${point.importance[0]} mins` : '-'}
+              {distances[entryId][pointId] ? `${distances[entryId][pointId]["walking"]} mins` : `${getDistanceBetween(entryId, pointId, "walking")} mins`}
             </td>,
             <td key={`driving-${index}`} style={{ textAlign: 'center' }}>
-              {point.importance[1] ? `${point.importance[1]} mins` : '-'}
-            </td>,
+              {distances[entryId][pointId] ? `${distances[entryId][pointId]["car"]} mins` : `${getDistanceBetween(entryId, pointId, "car")} mins`}
+              </td>,
             <td key={`transport-${index}`} style={{ textAlign: 'center' }}>
-              {point.importance[2] ? `${point.importance[2]} mins` : '-'}
-            </td>
+              {distances[entryId][pointId] ? `${distances[entryId][pointId]["transport"]} mins` : `${getDistanceBetween(entryId, pointId, "transport")} mins`}
+              </td>
           ];
         });
 
@@ -359,14 +406,14 @@ const Dashboard = () => {
   };
 
   const openAddEntryModal = () => {
-    setCurrentEntry({ Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Coziness:''});
+    setCurrentEntry({ Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Coziness: '' });
     setIsEditing(false);
     setIsNewHouseOpen(true);
   };
 
   // Open modal for editing an entry, ensuring `currentEntry` is defined
   const openEditEntryModal = (entry) => {
-    setCurrentEntry(entry || { Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Coziness:''} );
+    setCurrentEntry(entry || { Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Coziness: '' });
     setIsEditing(true);
     setIsNewHouseOpen(true);
   };
@@ -374,9 +421,9 @@ const Dashboard = () => {
   // Update function for input fields in the modal
   const handleNewEntryChange = (field, value) => {
     if (field === "Address" || field === "Link" || field === "Description")
-      setCurrentEntry(prev => ({ ...prev, [field]: value  }));
+      setCurrentEntry(prev => ({ ...prev, [field]: value }));
     else
-      if( field !== "Coziness" || (field === "Coziness" && Number(value) >= 0 && Number(value) <= 5))
+      if (field !== "Coziness" || (field === "Coziness" && Number(value) >= 0 && Number(value) <= 5))
         setCurrentEntry(prev => ({ ...prev, [field]: Number(value) }));
   };
 
@@ -387,16 +434,16 @@ const Dashboard = () => {
 
   const saveOrUpdateEntry = () => {
     if (currentEntry) {
-      entries[currentEntry.Address] = {"info":currentEntry, "score": entries[currentEntry.Address] ? entries[currentEntry.Address].score : 0};
+      entries[currentEntry.Address] = { "info": currentEntry, "score": entries[currentEntry.Address] ? entries[currentEntry.Address].score : 0 };
       add_update_place("entries", currentEntry.Address, currentEntry)
     }
     setIsNewHouseOpen(false); // Close the modal
   };
 
   const colors = ["#db284e", "#db284e", "#db8829", "#c9db29", "#4caf50", "#007bff"]
-  const icons = {"walking":"person-walking", "transport":"train", "car":"car"}
+  const icons = { "walking": "person-walking", "transport": "train", "car": "car" }
 
-  
+
   return (
     <div className="dashboard-container">
       {/* Header Section */}
@@ -404,15 +451,15 @@ const Dashboard = () => {
 
         {/* Sliders Section */}
         <div className="slider-container">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-    <Typography variant="h6">Importance</Typography>
-    <Typography
-      variant="body2"
-      style={{ fontWeight: 'bold', fontSize: '0.875rem', color: '#555', marginRight: '5%' }}
-    >
-      Max
-    </Typography>
-  </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <Typography variant="h6">Importance</Typography>
+            <Typography
+              variant="body2"
+              style={{ fontWeight: 'bold', fontSize: '0.875rem', color: '#555', marginRight: '5%' }}
+            >
+              Max
+            </Typography>
+          </div>
 
           {[...["Price", "Size", "Typology", "Coziness"]].map((name, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
@@ -576,12 +623,12 @@ const Dashboard = () => {
             fullWidth
             margin="normal"
           />
-        <AddressSearch
-          key={"Address"}
-          label={"Address"}
-          value={address} // Show currentEntry values
-          disableInteraction={currentPoint}
-          onChange={handleAddressChange} // Pass both address and geolocation
+          <AddressSearch
+            key={"Address"}
+            label={"Address"}
+            value={address} // Show currentEntry values
+            disableInteraction={currentPoint}
+            onChange={handleAddressChange} // Pass both address and geolocation
           />
 
 
@@ -590,8 +637,8 @@ const Dashboard = () => {
             <div style={{ flex: 1 }}>
               <Typography>Walking Distance Importance</Typography>
               <Slider
-                value={sliders[0]}
-                onChange={(e, v) => setPoiSliders({...poiSliders, "walking":v})}
+                value={poiSliders["walking"]}
+                onChange={(e, v) => setPoiSliders({ ...poiSliders, "walking": v })}
                 min={0}
                 max={5}
                 step={1}
@@ -615,8 +662,8 @@ const Dashboard = () => {
             <div style={{ flex: 1 }}>
               <Typography>Transport Distance Importance</Typography>
               <Slider
-                value={sliders[1]}
-                onChange={(e, v) => setSliders({...poiSliders, "transport":v})}
+                value={poiSliders["transport"]}
+                onChange={(e, v) => setPoiSliders({ ...poiSliders, "transport": v })}
                 min={0}
                 max={5}
                 step={1}
@@ -637,8 +684,8 @@ const Dashboard = () => {
             <div style={{ flex: 1 }}>
               <Typography>Driving Distance Importance</Typography>
               <Slider
-                value={sliders[2]}
-                onChange={(e, v) => setSliders({...poiSliders, "car":v})}
+                value={poiSliders["car"]}
+                onChange={(e, v) => setPoiSliders({ ...poiSliders, "car": v })}
                 min={0}
                 max={5}
                 step={1}

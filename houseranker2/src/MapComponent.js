@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
-import { Typography } from '@mui/material';
 import { useMap } from 'react-leaflet';
 
 const CenterUpdater = ({ center }) => {
@@ -40,7 +39,6 @@ const MapComponent = ({ pointsOfInterest }) => {
             setMeanGeolocation(getMeanGeolocation(pointsOfInterest));
         }
     }, [pointsOfInterest]);  // Dependency on pointsOfInterest
-
     return (
         <div className="map-container" style={{ height: '100%', width: '100%' }}>
             <MapContainer
@@ -52,7 +50,7 @@ const MapComponent = ({ pointsOfInterest }) => {
 
                 {/* Update map center when meanGeolocation changes */}
                 <CenterUpdater center={[meanGeolocation.lat, meanGeolocation.lon]} />
-
+                
                 {/* Markers for each point of interest */}
                 {Object.values(pointsOfInterest).map((poi, index) => (
                     <Marker
