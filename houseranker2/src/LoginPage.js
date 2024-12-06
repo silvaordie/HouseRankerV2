@@ -4,9 +4,22 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Spinner from './Spinner';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { auth, db } from "./firebase"; // Make sure your Firebase config is imported
+import { auth, db, googleProvider, signInWithPopup } from "./firebase"; // Make sure your Firebase config is imported
 import { setDoc, doc } from "firebase/firestore"; // Import Firestore functions
+import { Elements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
+import StripeContainer from './CheckoutButton';
+const stripePromise = loadStripe('pk_live_51QT22MCOCKfzBcyXDW5bHchyHEwG416gSH1dj72JxEyeEXK6VAcFKKO16DcydzFpw5XAqtPOSqTxIahOujOLAlog00U9kYrv4f');
 
+const handleGoogleSignIn = async () => {
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    const user = result.user;
+    console.log("User info:", user); // You can use this info in your app
+  } catch (error) {
+    console.error("Error during sign-in:", error);
+  }
+};
 
 const LoginPage = ({ setIsAuthenticated }) => {
   const [errorMessage, setErrorMessage] = useState('');
@@ -28,7 +41,13 @@ const LoginPage = ({ setIsAuthenticated }) => {
         {isLogin ? 'Switch to Sign Up' : 'Switch to Login'}
       </button>
       <Link to="/reset-password">Forgot/Reset Password?</Link>
-
+      <div>
+        <button onClick={handleGoogleSignIn}>Sign in with Google</button>
+      </div>
+      <div className="App">
+      <h2>Stripe Checkout</h2>
+      <StripeContainer />
+    </div>     
     </div>
   );
 };
@@ -109,7 +128,7 @@ const SignUpForm = ({ setErrorMessage }) => {
           createdAt: new Date().toISOString()
         });
         await setDoc(doc(db, "users_entries", user.uid), { // Set document with user's UID
-          sliderValues:{"Size":0, "Typology":0, "Price":0,"Coziness":0}
+          sliderValues: { "Size": 0, "Typology": 0, "Price": 0, "Coziness": 0 }
         });
         alert("User created: " + userCredential.user.email); // Display user email instead of the user object
       }

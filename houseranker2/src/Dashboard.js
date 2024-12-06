@@ -37,7 +37,7 @@ const Dashboard = () => {
   const [geolocation, setGeolocation] = useState({ lat: null, lon: null });
   const [sliders, setSliders] = useState({ "Size": 0, "Typology": 0, "Price": 0, "Coziness": 0 });
   const [poiSliders, setPoiSliders] = useState({ "walking": 0, "car": 0, "transport": 0 });
-  const [maxs, setMaxs] = useState([0, 0, 0, 0]);
+  const [maxs, setMaxs] = useState({});
   const [currentEntry, setCurrentEntry] = useState(null); // For both adding and editing
   const [isEditing, setIsEditing] = useState(false);
   const [distances, setDistances] = useState({});
@@ -389,6 +389,9 @@ const Dashboard = () => {
 
         // Generate the distance data cells for each point of interest
         const interestPointDataCells = Object.entries(pointsOfInterest).map(([pointId, point], index) => {
+          for (const [field, value] of Object.entries(point.maxs)) {
+            score += (((distances[entryId] && distances[entryId][pointId] &&  distances[entryId][pointId][field] < value) ? ((value - distances[entryId][pointId][field])*5)/value : 0) * point["importance"][field] )
+          }
           if (!distances[entryId])
             distances[entryId] = {};
           return [
@@ -560,7 +563,7 @@ const Dashboard = () => {
 
                           {/* Display the max value closer to the icon */}
                           <text x="18" y="26" textAnchor="middle" fill={colors[imp]} fontSize="6">
-                            {pointsOfInterest[point].maxs[index] || 0} mins
+                            {pointsOfInterest[point].maxs[typ] || 0} mins
                           </text>
                         </svg>
                       </div>
@@ -678,7 +681,10 @@ const Dashboard = () => {
                 style={{ width: '60px' }}
                 value={maxs[0]}
                 placeholder="mins"
-                onChange={(e) => setMaxs([parseInt(e.target.value) || 0, maxs[1], maxs[2]])}
+                onChange={(e) => setMaxs(prevMaxs => ({
+                  ...prevMaxs,
+                  "walking": parseInt(e.target.value) || 0,
+                }))}
               />
             </div>
           </div>
@@ -701,8 +707,10 @@ const Dashboard = () => {
               style={{ width: '60px', marginLeft: '20px' }}
               value={maxs[1]}
               placeholder="mins"
-              onChange={(e) => setMaxs([maxs[0], parseInt(e.target.value) || 0, maxs[2]])}
-            />
+              onChange={(e) => setMaxs(prevMaxs => ({
+                ...prevMaxs,
+                "transport": parseInt(e.target.value) || 0,
+              }))}            />
           </div>
 
           {/* Slider for Driving Distance */}
@@ -723,8 +731,10 @@ const Dashboard = () => {
               style={{ width: '60px', marginLeft: '20px' }}
               value={maxs[2]}
               placeholder="mins"
-              onChange={(e) => setMaxs([maxs[0], maxs[1], parseInt(e.target.value) || 0])}
-            />
+              onChange={(e) => setMaxs(prevMaxs => ({
+                ...prevMaxs,
+                "car": parseInt(e.target.value) || 0,
+              }))}            />
           </div>
 
           {/* Buttons */}

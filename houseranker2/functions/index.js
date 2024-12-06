@@ -127,6 +127,30 @@ exports.calculateDistance = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError('internal', 'An error occurred while calculating distances.');
   }
 });
+
+exports.createCheckoutSession = functions.https.onRequest(async (req, res) => {
+  const { priceId } = req.body; // Price ID from Stripe Dashboard
+
+  try {
+      const session = await stripe.checkout.sessions.create({
+          payment_method_types: ['card', 'google_pay'],
+          mode: 'payment',
+          line_items: [
+              {
+                  price: priceId, // Predefined price in Stripe
+                  quantity: 1,
+              },
+          ],
+          success_url: 'https://your-app.com/success',
+          cancel_url: 'https://your-app.com/cancel',
+      });
+
+      res.status(200).json({ sessionId: session.id });
+  } catch (error) {
+      res.status(500).json({ error: error.message });
+  }
+});
+
 /*try {
   const docRef = db.collection(collectionName).doc(docId);
   const docSnapshot = await docRef.get();
