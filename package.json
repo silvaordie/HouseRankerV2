@@ -1,6 +1,9 @@
 {
   "dependencies": {
     "@stripe/stripe-js": "^1.29.0",
-    "react-stripe-js": "^1.1.5"
+    "dependencies": "^0.0.1",
+    "express": "^4.21.2",
+    "react-stripe-js": "^1.1.5",
+    "stripe": "^17.4.0"
   }
 }

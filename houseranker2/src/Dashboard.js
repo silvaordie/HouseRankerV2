@@ -16,7 +16,10 @@ import { updateDoc, doc, getDoc, setDoc, collection, getDocs, deleteDoc } from "
 import { useAuth } from "./AuthContext"; // Import your custom auth hook/context provider
 import AddressSearch from "./AddressSearch";
 import MapComponent from './MapComponent';  // Import MapComponent
+import ToolbarLayout from './ToolbarLayout';
+
 import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/functions";
+
 //import { calculateDistance } from '../functions';
 
 const Dashboard = () => {
@@ -475,6 +478,7 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard-container">
+    <ToolbarLayout user={currentUser} />
       {/* Header Section */}
       <div className="top-container">
 

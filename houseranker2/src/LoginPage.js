@@ -1,63 +1,94 @@
 // src/LoginPage.js
-import "./App.css"
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import Spinner from './Spinner';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { auth, db, googleProvider, signInWithPopup } from "./firebase"; // Make sure your Firebase config is imported
-import { setDoc, doc } from "firebase/firestore"; // Import Firestore functions
-import { Elements } from '@stripe/react-stripe-js';
-import { loadStripe } from '@stripe/stripe-js';
-import StripeContainer from './CheckoutButton';
-const stripePromise = loadStripe('pk_live_51QT22MCOCKfzBcyXDW5bHchyHEwG416gSH1dj72JxEyeEXK6VAcFKKO16DcydzFpw5XAqtPOSqTxIahOujOLAlog00U9kYrv4f');
+import "./App.css";
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
+import Spinner from "./Spinner";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+} from "firebase/auth";
+import {
+  auth,
+  db,
+  googleProvider,
+  signInWithPopup,
+  facebookProvider,
+} from "./firebase"; // Ensure FacebookAuthProvider is imported
+import { setDoc, doc } from "firebase/firestore"; // Firestore functions
 
+// Google sign-in handler
 const handleGoogleSignIn = async () => {
   try {
     const result = await signInWithPopup(auth, googleProvider);
     const user = result.user;
     console.log("User info:", user); // You can use this info in your app
   } catch (error) {
-    console.error("Error during sign-in:", error);
+    console.error("Error during Google sign-in:", error);
+  }
+};
+
+// Facebook sign-in handler
+const handleFacebookSignIn = async () => {
+   try {
+    const result = await signInWithPopup(auth, facebookProvider);
+    const user = result.user;
+    console.log("User info:", user); // You can use this info in your app
+  } catch (error) {
+    console.error("Error during Facebook sign-in:", error);
   }
 };
 
 const LoginPage = ({ setIsAuthenticated }) => {
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState("");
   const [isLogin, setIsLogin] = useState(true); // State to toggle between login and signup
+  const [showEmailForm, setShowEmailForm] = useState(false); // State to show/hide email login form
 
   return (
     <div>
-      <h2>{isLogin ? 'Login' : 'Sign Up'}</h2>
+      <h2>{isLogin ? "Login" : "Sign Up"}</h2>
 
-      {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
+      {errorMessage && <p style={{ color: "red" }}>{errorMessage}</p>}
 
-      {isLogin ? (
-        <LoginForm setErrorMessage={setErrorMessage} setIsAuthenticated={setIsAuthenticated} />
-      ) : (
-        <SignUpForm setErrorMessage={setErrorMessage} />
+      {showEmailForm && (
+        isLogin ? (
+          <LoginForm setErrorMessage={setErrorMessage} setIsAuthenticated={setIsAuthenticated} />
+        ) : (
+          <SignUpForm setErrorMessage={setErrorMessage} />
+        )
       )}
 
-      <button onClick={() => { setIsLogin(!isLogin); setErrorMessage('') }}>
-        {isLogin ? 'Switch to Sign Up' : 'Switch to Login'}
-      </button>
-      <Link to="/reset-password">Forgot/Reset Password?</Link>
-      <div>
-        <button onClick={handleGoogleSignIn}>Sign in with Google</button>
+      <div className="signin-options">
+        {!showEmailForm && (
+          <button onClick={() => setShowEmailForm(true)}>Sign in with Email</button>
+        )}
+        <button onClick={handleGoogleSignIn}>Login with Google</button>
+        <button onClick={handleFacebookSignIn}>Login with Facebook</button>
       </div>
-      <div className="App">
-      <h2>Stripe Checkout</h2>
-      <StripeContainer />
-    </div>     
+
+      {showEmailForm && (
+        <button
+          onClick={() => {
+            setIsLogin(!isLogin);
+            setErrorMessage("");
+          }}
+          style={{ marginTop: "1rem" }}
+        >
+          {isLogin ? "Switch to Sign Up" : "Switch to Login"}
+        </button>
+      )}
+
+      <Link to="/reset-password" style={{ display: "block", marginTop: "1rem" }}>
+        Forgot/Reset Password?
+      </Link>
     </div>
   );
 };
 
-
 // Login form component
 const LoginForm = ({ setErrorMessage, setIsAuthenticated }) => {
-
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
@@ -75,13 +106,13 @@ const LoginForm = ({ setErrorMessage, setIsAuthenticated }) => {
 
   // Clear error on user input change
   const handleInputChange = (e) => {
-    setErrorMessage('');
+    setErrorMessage("");
     const { name, value } = e.target;
-    name === 'email' ? setEmail(value) : setPassword(value);
+    name === "email" ? setEmail(value) : setPassword(value);
   };
 
   return (
-    <div className="container" style={{ position: 'relative' }}>
+    <div className="container" style={{ position: "relative" }}>
       <form onSubmit={handleLogin}>
         <input
           type="email"
@@ -100,19 +131,19 @@ const LoginForm = ({ setErrorMessage, setIsAuthenticated }) => {
           required
         />
         <button type="submit" disabled={loading}>
-          {loading ? 'Logging in...' : 'Login'}
+          {loading ? "Logging in..." : "Login"}
         </button>
       </form>
       {loading && <Spinner />} {/* Show spinner if loading */}
     </div>
   );
 };
+
 // Sign-up form component
 const SignUpForm = ({ setErrorMessage }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false); // State to track loading
-
 
   const handleSignUp = async (e) => {
     e.preventDefault();
@@ -123,29 +154,40 @@ const SignUpForm = ({ setErrorMessage }) => {
 
       if (userCredential) {
         // Store additional user information in Firestore
-        await setDoc(doc(db, "users", user.uid), { // Set document with user's UID
+        await setDoc(doc(db, "users", user.uid), {
           email: user.email,
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
         });
-        await setDoc(doc(db, "users_entries", user.uid), { // Set document with user's UID
-          sliderValues: { "Size": 0, "Typology": 0, "Price": 0, "Coziness": 0 }
+        await setDoc(doc(db, "users_entries", user.uid), {
+          sliderValues: { Size: 0, Typology: 0, Price: 0, Coziness: 0 },
         });
         alert("User created: " + userCredential.user.email); // Display user email instead of the user object
       }
     } catch (error) {
-      //await signOut(auth)
       setErrorMessage(error.message);
     } finally {
-      setErrorMessage('');
+      setErrorMessage("");
       setLoading(false); // Hide the spinner
     }
   };
 
   return (
-    <div className="container" style={{ position: 'relative' }}>
+    <div className="container" style={{ position: "relative" }}>
       <form onSubmit={handleSignUp}>
-        <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
         <button type="submit">Sign Up</button>
       </form>
       {loading && <Spinner />} {/* Show spinner while loading */}
