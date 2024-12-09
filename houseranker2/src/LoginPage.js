@@ -15,13 +15,14 @@ import {
   signInWithPopup,
   facebookProvider,
 } from "./firebase"; // Ensure FacebookAuthProvider is imported
-import { setDoc, doc } from "firebase/firestore"; // Firestore functions
+import { setDoc, doc, getDoc } from "firebase/firestore"; // Firestore functions
 
 // Google sign-in handler
 const handleGoogleSignIn = async () => {
   try {
     const result = await signInWithPopup(auth, googleProvider);
     const user = result.user;
+    createUserData(user);
     console.log("User info:", user); // You can use this info in your app
   } catch (error) {
     console.error("Error during Google sign-in:", error);
@@ -33,6 +34,7 @@ const handleFacebookSignIn = async () => {
    try {
     const result = await signInWithPopup(auth, facebookProvider);
     const user = result.user;
+    createUserData(user);
     console.log("User info:", user); // You can use this info in your app
   } catch (error) {
     console.error("Error during Facebook sign-in:", error);
@@ -138,7 +140,22 @@ const LoginForm = ({ setErrorMessage, setIsAuthenticated }) => {
     </div>
   );
 };
-
+const createUserData = async (user) => {
+  const docRef = doc(db, "users", user.uid);
+  const docSnapshot = await getDoc(docRef);
+      
+  if (!docSnapshot.exists()) {
+    // Store additional user information in Firestore
+    await setDoc(doc(db, "users", user.uid), {
+      email: user.email,
+      createdAt: new Date().toISOString(),
+      tokens:{"pointsOfInterest":1, "entries":3}
+    });
+    await setDoc(doc(db, "users_entries", user.uid), {
+      sliderValues: { Size: 0, Typology: 0, Price: 0, Coziness: 0 },
+    });
+  }
+}
 // Sign-up form component
 const SignUpForm = ({ setErrorMessage }) => {
   const [email, setEmail] = useState("");
@@ -153,15 +170,7 @@ const SignUpForm = ({ setErrorMessage }) => {
       const user = userCredential.user;
 
       if (userCredential) {
-        // Store additional user information in Firestore
-        await setDoc(doc(db, "users", user.uid), {
-          email: user.email,
-          createdAt: new Date().toISOString(),
-        });
-        await setDoc(doc(db, "users_entries", user.uid), {
-          sliderValues: { Size: 0, Typology: 0, Price: 0, Coziness: 0 },
-        });
-        alert("User created: " + userCredential.user.email); // Display user email instead of the user object
+        createUserData(user);
       }
     } catch (error) {
       setErrorMessage(error.message);

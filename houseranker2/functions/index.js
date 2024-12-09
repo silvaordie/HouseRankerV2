@@ -11,6 +11,8 @@ const { onDocumentUpdated, onDocumentWritten } = require("firebase-functions/v2/
 const admin = require("firebase-admin");
 const functions = require("firebase-functions")
 const cors = require("cors");
+require("dotenv").config();
+const stripe = require("stripe")(String(process.env.STRIPE_SECRET_KEY));
 
 // Initialize the Firebase Admin SDK
 admin.initializeApp();
@@ -128,28 +130,38 @@ exports.calculateDistance = functions.https.onCall(async (data, context) => {
   }
 });
 
-exports.createCheckoutSession = functions.https.onRequest(async (req, res) => {
-  const { priceId } = req.body; // Price ID from Stripe Dashboard
+exports.createPaymentIntent = functions.https.onRequest(async (req, res) => {
+    try {
+      if (req.method !== "POST") {
+        return res.status(405).send({ error: "Only POST requests are allowed." });
+      }
 
-  try {
-      const session = await stripe.checkout.sessions.create({
-          payment_method_types: ['card', 'google_pay'],
-          mode: 'payment',
-          line_items: [
-              {
-                  price: priceId, // Predefined price in Stripe
-                  quantity: 1,
-              },
-          ],
-          success_url: 'https://your-app.com/success',
-          cancel_url: 'https://your-app.com/cancel',
+      const { amount } = req.body;
+      if (!amount || typeof amount !== "number") {
+        return res.status(400).send({ error: "Invalid or missing amount." });
+      }
+
+      // Set a timeout to prevent the request from hanging too long
+      const timeout = 10000; // Timeout in milliseconds (10 seconds)
+
+      const stripeCall = stripe.paymentIntents.create({
+        amount: amount,
+        currency: "chf",
+        automatic_payment_methods: { enabled: true },
       });
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request Timeout')), timeout)
+      );
 
-      res.status(200).json({ sessionId: session.id });
-  } catch (error) {
-      res.status(500).json({ error: error.message });
-  }
+      const paymentIntent = await Promise.race([stripeCall, timeoutPromise]);
+
+      res.status(200).send({ clientSecret: paymentIntent.client_secret });
+    } catch (error) {
+      console.error("Error creating Payment Intent:", error.message);
+      res.status(500).send({ error: `Internal Server Error: ${error.message}` });
+    }
 });
+
 
 /*try {
   const docRef = db.collection(collectionName).doc(docId);

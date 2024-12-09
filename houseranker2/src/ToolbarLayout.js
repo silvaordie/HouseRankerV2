@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   AppBar,
   Toolbar,
@@ -13,7 +14,10 @@ import {
   Typography,
 } from "@mui/material";
 
+
 const ToolbarLayout = ({ user }) => {
+  const navigate = useNavigate();
+
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const handleProfileIconClick = () => setDrawerOpen(true);
@@ -46,7 +50,6 @@ const ToolbarLayout = ({ user }) => {
       <Box sx={{ mt: 1, padding: 1 }}>
 
       </Box>
-
       {/* Vertical Sidebar */}
       <Drawer anchor="right" open={drawerOpen} onClose={closeDrawer}>
         <Box sx={{ width: 300, padding: 2 }}>
@@ -64,7 +67,17 @@ const ToolbarLayout = ({ user }) => {
             <ListItem>
               <ListItemText
                 primary="Account Created"
-                secondary={user.accountCreated}
+                secondary={user.createdAt}
+              />
+            </ListItem>
+            <ListItem>
+              <ListItemText
+                primary="Tokens :"
+                secondary={"Point of Interest: "+ user && user.tokens ?  user.tokens["pointsOfInterest"] : 0 }
+              />
+              <ListItemText
+                primary="."
+                secondary={"Point of Interest: "+ user && user.tokens ? user.tokens["entries"] : 0}
               />
             </ListItem>
           </List>
@@ -74,15 +87,15 @@ const ToolbarLayout = ({ user }) => {
             fullWidth
             sx={{
               mt: 4,
-              backgroundColor: "#1976d2",
+              backgroundColor: "#000000",
               color: "white",
               fontWeight: "bold",
             }}
             onClick={() =>
-              alert("Explore upgrade options for your subscription.")
+              navigate("/select-plan")
             }
           >
-            Current Plan: See Upgrade Options
+            Get more tokens
           </Button>
         </Box>
       </Drawer>

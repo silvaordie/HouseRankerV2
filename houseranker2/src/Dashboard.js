@@ -17,12 +17,15 @@ import { useAuth } from "./AuthContext"; // Import your custom auth hook/context
 import AddressSearch from "./AddressSearch";
 import MapComponent from './MapComponent';  // Import MapComponent
 import ToolbarLayout from './ToolbarLayout';
+import { useNavigate } from "react-router-dom";
 
 import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/functions";
 
 //import { calculateDistance } from '../functions';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+
   //const navigate = useNavigate();
   const { currentUser } = useAuth(); // Access currentUser directly from context
   const [userStats, setUserStats] = useState({});
@@ -35,6 +38,7 @@ const Dashboard = () => {
   const [isNewPointOpen, setIsNewPointOpen] = useState(false);
   const [currentPoint, setCurrentPoint] = useState(null); // To track if editing an existing point
 
+  const [userData, setUserData] = useState({});
   const [address, setAddress] = useState('');
   const [name, setName] = useState('');
   const [geolocation, setGeolocation] = useState({ lat: null, lon: null });
@@ -44,7 +48,8 @@ const Dashboard = () => {
   const [currentEntry, setCurrentEntry] = useState(null); // For both adding and editing
   const [isEditing, setIsEditing] = useState(false);
   const [distances, setDistances] = useState({});
-
+  const [outOfTokens, setOutOfTokens] = useState(false);
+  
   const updateUserData = async () => {
     if (currentUser) { // Ensure currentUser is defined
       try {
@@ -64,7 +69,7 @@ const Dashboard = () => {
     const getDistanceBetween = async (entryId, poiId, method) => {
       const docRef = doc(db, "distances", entryId);
       const docSnapshot = await getDoc(docRef);
-      
+
       if (!docSnapshot.exists()) {
         try {
           await setDoc(docRef, {});
@@ -72,9 +77,9 @@ const Dashboard = () => {
           console.log(error.message);
         }
       }
-  
+
       const docData = docSnapshot.data();
-  
+
       if (docData && docData[poiId]) {
         // When the data is already present in Firestore, update distances state correctly
         setDistances(prevDistances => ({
@@ -88,9 +93,9 @@ const Dashboard = () => {
         const functions = getFunctions(); // Get the functions instance
         connectFunctionsEmulator(functions, "localhost", 5001);  // Make sure emulator is running
         const checkPoint = httpsCallable(functions, "calculateDistance");
-  
+
         const result = await checkPoint({ entryId, poiId });
-  
+
         // When the result is fetched, update the distances state
         setDistances(prevDistances => ({
           ...prevDistances,
@@ -99,12 +104,12 @@ const Dashboard = () => {
             [poiId]: result.data,
           },
         }));
-  
+
         // Save the result to Firestore
         await setDoc(docRef, { [poiId]: result.data }, { merge: true });
       }
     };
-  
+
     // Iterate over entries and points of interest
     Object.keys(entries).forEach(entryId => {
       Object.keys(pointsOfInterest).forEach(poiId => {
@@ -112,13 +117,18 @@ const Dashboard = () => {
       });
     });
   }, [pointsOfInterest, entries]);
-  
+
 
   const fetchData = useCallback(async () => {
     if (currentUser) { // Ensure currentUser is defined
       //const result = checkPoint({ entryId:"1", poiId:"37, Spalentorweg, Am Ring, Grossbasel, Basel, Basel-City, 4051, Switzerland" });
 
       try {
+        const userRef = doc(db, "users", currentUser.uid); // Reference to the user's document
+        const udoc = await getDoc(userRef); // Fetch the document
+
+        setUserData(udoc.data())
+
         const userDocRef = doc(db, "users_entries", currentUser.uid); // Reference to the user's document
         const userDoc = await getDoc(userDocRef); // Fetch the document
         let data = userDoc.data();
@@ -205,19 +215,38 @@ const Dashboard = () => {
     }
   };
   // Open modal for adding or editing
-  const openModal = (point = null) => {
-    if (point) {
-      setAddress(point);
-      setPoiSliders(pointsOfInterest[point].importance);
-      setName(pointsOfInterest[point].name);
-      if (pointsOfInterest[point].maxs) { setMaxs(pointsOfInterest[point].maxs) }
-      setCurrentPoint(point);
-    } else {
-      setAddress('');
-      setPoiSliders({ "walking": 0, "car": 0, "transport": 0 });
-      setCurrentPoint(null);
+  const openModal = async (point = null) => {
+    if (userData && userData.tokens.pointsOfInterest > 0) {
+      const docRef = doc(db, "users", currentUser.uid);
+      const docSnapshot = await getDoc(docRef);
+
+      const data = docSnapshot.data();
+      console.log("aaaaaaaaa")
+      if (data.tokens.pointsOfInterest > 0) {
+        if (point) {
+          setAddress(point);
+          setPoiSliders(pointsOfInterest[point].importance);
+          setName(pointsOfInterest[point].name);
+          if (pointsOfInterest[point].maxs) { setMaxs(pointsOfInterest[point].maxs) }
+          setCurrentPoint(point);
+        } else {
+          setAddress('');
+          setPoiSliders({ "walking": 0, "car": 0, "transport": 0 });
+          setCurrentPoint(null);
+        }
+        setIsNewPointOpen(true);
+      }
+      else
+      {
+        console.log("asdasd")
+        setOutOfTokens(true);
+      }
     }
-    setIsNewPointOpen(true);
+    else
+    {
+      console.log("asdasd")
+      setOutOfTokens(true);
+    };
   };
   const add_update_place = async (collectionPath, documentId, data) => {
     const docRef = doc(db, collectionPath, documentId);
@@ -393,7 +422,7 @@ const Dashboard = () => {
         // Generate the distance data cells for each point of interest
         const interestPointDataCells = Object.entries(pointsOfInterest).map(([pointId, point], index) => {
           for (const [field, value] of Object.entries(point.maxs)) {
-            score += (((distances[entryId] && distances[entryId][pointId] &&  distances[entryId][pointId][field] < value) ? ((value - distances[entryId][pointId][field])*5)/value : 0) * point["importance"][field] )
+            score += (((distances[entryId] && distances[entryId][pointId] && distances[entryId][pointId][field] < value) ? ((value - distances[entryId][pointId][field]) * 5) / value : 0) * point["importance"][field])
           }
           if (!distances[entryId])
             distances[entryId] = {};
@@ -475,10 +504,9 @@ const Dashboard = () => {
   const colors = ["#db284e", "#db284e", "#db8829", "#c9db29", "#4caf50", "#007bff"]
   const icons = { "walking": "person-walking", "transport": "train", "car": "car" }
 
-
   return (
     <div className="dashboard-container">
-    <ToolbarLayout user={currentUser} />
+      <ToolbarLayout user={userData} />
       {/* Header Section */}
       <div className="top-container">
 
@@ -613,7 +641,18 @@ const Dashboard = () => {
         <Button variant="contained" onClick={() => { openAddEntryModal() }}>Add New Entry</Button>
 
       </div>
-
+      {/* Modal ran out of tokens*/}
+      <Modal open={outOfTokens} onClose={() => setOutOfTokens(false)}>
+        <Box className="modal-box" style={{ display: 'flex', flexDirection: 'column' }}>
+          <Typography variant="h6">{'No more tokens'}</Typography>
+          <Box marginTop={2}>
+            <Button onClick={() =>navigate("/select-plan")}
+              >
+              {'get more tokens'}
+            </Button>
+          </Box>
+        </Box>
+      </Modal>
       {/* Modal for Adding New Entry */}
       <Modal open={isNewHouseOpen} onClose={() => setIsNewHouseOpen(false)}>
         <Box className="modal-box" style={{ display: 'flex', flexDirection: 'column' }}>
@@ -714,7 +753,7 @@ const Dashboard = () => {
               onChange={(e) => setMaxs(prevMaxs => ({
                 ...prevMaxs,
                 "transport": parseInt(e.target.value) || 0,
-              }))}            />
+              }))} />
           </div>
 
           {/* Slider for Driving Distance */}
@@ -738,7 +777,7 @@ const Dashboard = () => {
               onChange={(e) => setMaxs(prevMaxs => ({
                 ...prevMaxs,
                 "car": parseInt(e.target.value) || 0,
-              }))}            />
+              }))} />
           </div>
 
           {/* Buttons */}
