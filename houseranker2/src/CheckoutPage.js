@@ -4,6 +4,7 @@ import {
   useElements,
   PaymentElement,
 } from "@stripe/react-stripe-js";
+import { useAuth } from "./AuthContext";
 
 const CheckoutPage = (amount) => {
   const stripe = useStripe();
@@ -11,18 +12,23 @@ const CheckoutPage = (amount) => {
   const [errorMessage, setErrorMessage] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [loading, setLoading] = useState(false);
+  const { currentUser } = useAuth();
 
   useEffect(() => {
-    setClientSecret(null)
-    fetch("http://127.0.0.1:5001/housepickerv2/us-central1/createPaymentIntent", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify( amount),
-    })
-      .then((res) => res.json())
-      .then((data) => setClientSecret(data.clientSecret));
+    if(currentUser)
+    {
+      const amount_value = amount.amount;
+      setClientSecret(null)
+      fetch("http://127.0.0.1:5001/housepickerv2/us-central1/createPaymentIntent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify( {"amount": amount_value, "uid":currentUser.uid}),
+      })
+        .then((res) => res.json())
+        .then((data) => setClientSecret(data.clientSecret));
+    }
   }, [amount]);
 
   const handleSubmit = async (event) => {
@@ -45,7 +51,7 @@ const CheckoutPage = (amount) => {
       elements,
       clientSecret,
       confirmParams: {
-        return_url: `/dashboard`,
+        return_url: `http://localhost:3000/select-plan`,
       },
     });
 

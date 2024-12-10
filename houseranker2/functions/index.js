@@ -136,18 +136,21 @@ exports.createPaymentIntent = functions.https.onRequest(async (req, res) => {
         return res.status(405).send({ error: "Only POST requests are allowed." });
       }
 
-      const { amount } = req.body;
+      const { amount, uid } = req.body;
+
       if (!amount || typeof amount !== "number") {
         return res.status(400).send({ error: "Invalid or missing amount." });
       }
 
       // Set a timeout to prevent the request from hanging too long
       const timeout = 10000; // Timeout in milliseconds (10 seconds)
-
       const stripeCall = stripe.paymentIntents.create({
         amount: amount,
         currency: "chf",
         automatic_payment_methods: { enabled: true },
+        metadata: {
+          userId: uid, // Replace with actual user ID
+        },
       });
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Request Timeout')), timeout)
@@ -162,7 +165,49 @@ exports.createPaymentIntent = functions.https.onRequest(async (req, res) => {
     }
 });
 
+exports.handleStripeWebhook = functions.https.onRequest(async (req, res) => {
+  console.log("FieldValue:", admin.firestore.FieldValue);
 
+  const sig = req.headers["stripe-signature"];
+  const endpointSecret = "whsec_bd46jDBRQC0NKP5Au0cxJRQRaA54SK1A"; // Set this in your Stripe dashboard
+  const tokens = {2050:{"pointsOfInterest":3, "entries":25}, 1550:{"pointsOfInterest":3, "entries":15}, 750:{"pointsOfInterest":0, "entries":10} };
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
+  } catch (err) {
+    console.error("Webhook error:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Handle the event
+  if (event.type === "payment_intent.succeeded") {
+    const paymentIntent = event.data.object;
+
+    // Extract custom metadata or fields to identify the user
+    const userId = paymentIntent.metadata.userId; // Example metadata
+    const amount = paymentIntent.amount;
+    try {
+      const userDocRef = admin.firestore().collection("users").doc(userId);
+      const userDoc = userDocRef.get()
+      const data = (await userDoc).data()
+      console.log(tokens[amount])
+      const newEntries = (data.tokens.entries || 0) + tokens[amount]["entries"];
+      const newPointsOfInterest = (data.tokens.pointsOfInterest || 0) + tokens[amount]["pointsOfInterest"];
+      
+      await userDocRef.set({
+        tokens: {
+          entries: newEntries,
+          pointsOfInterest: newPointsOfInterest
+        }},{merge:true}
+      );
+    } catch (error) {
+      console.error("Firestore update error:", error.message);
+    }
+  }
+
+  // Acknowledge receipt of the event
+  res.status(200).send("Webhook received");
+});
 /*try {
   const docRef = db.collection(collectionName).doc(docId);
   const docSnapshot = await docRef.get();

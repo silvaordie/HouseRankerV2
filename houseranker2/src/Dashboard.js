@@ -49,7 +49,7 @@ const Dashboard = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [distances, setDistances] = useState({});
   const [outOfTokens, setOutOfTokens] = useState(false);
-  
+
   const updateUserData = async () => {
     if (currentUser) { // Ensure currentUser is defined
       try {
@@ -236,18 +236,31 @@ const Dashboard = () => {
         }
         setIsNewPointOpen(true);
       }
-      else
-      {
+      else {
         console.log("asdasd")
         setOutOfTokens(true);
       }
     }
-    else
-    {
+    else {
       console.log("asdasd")
       setOutOfTokens(true);
     };
   };
+
+  const consumeToken = async (collectionPath) => {
+    const userDocRef = doc(db, "users", currentUser.uid); // Reference to the user's document
+    const userDoc = await getDoc(userDocRef); // Fetch the document
+    const data = userDoc.data();
+
+    const newTokens = data.tokens[collectionPath] -1;
+    
+    await setDoc(userDocRef,{
+      tokens: {
+        [collectionPath]: newTokens,
+      }},{merge:true}
+    );
+  }
+
   const add_update_place = async (collectionPath, documentId, data) => {
     const docRef = doc(db, collectionPath, documentId);
     const docSnap = await getDoc(docRef);
@@ -259,6 +272,14 @@ const Dashboard = () => {
     const path = "users_" + collectionPath;
     const userdocRef = doc(db, path, currentUser.uid);
     const userdocSnap = await getDoc(userdocRef);
+    const subCollectionRef = collection(userdocRef, collectionPath); // Sub-collection named as `collectionPath`
+    const subDocRef = doc(subCollectionRef, documentId);
+    const subDdocSnap = await getDoc(subDocRef);
+
+    if (!subDdocSnap.exists())
+      consumeToken(collectionPath)
+
+    await setDoc(subDocRef, data, { merge: true });
 
     if (collectionPath === "entries" && (!userdocSnap.exists() || !userdocSnap.data().maxs)) {
       const maxDefaults = { "entries": { "Size": data.Size, "Typology": data.Typology, "Price": data.Price, "Coziness": 0 }, "pointsOfInterest": { "walking": 0, "transport": 0, "car": 0 } };
@@ -267,11 +288,6 @@ const Dashboard = () => {
       await setDoc(userdocRef, { "stats": bestDefaults[collectionPath] }, { merge: true });
       await setDoc(userdocRef, { "maxs": maxDefaults[collectionPath] }, { merge: true });
     }
-    const subCollectionRef = collection(userdocRef, collectionPath); // Sub-collection named as `collectionPath`
-    const subDocRef = doc(subCollectionRef, documentId);
-
-    await setDoc(subDocRef, data, { merge: true });
-
   };
   // Save point of interest
   const savePointOfInterest = () => {
@@ -506,7 +522,7 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard-container">
-      <ToolbarLayout user={userData} />
+      <ToolbarLayout user={currentUser.uid} db={db} />
       {/* Header Section */}
       <div className="top-container">
 
@@ -646,8 +662,8 @@ const Dashboard = () => {
         <Box className="modal-box" style={{ display: 'flex', flexDirection: 'column' }}>
           <Typography variant="h6">{'No more tokens'}</Typography>
           <Box marginTop={2}>
-            <Button onClick={() =>navigate("/select-plan")}
-              >
+            <Button onClick={() => navigate("/select-plan")}
+            >
               {'get more tokens'}
             </Button>
           </Box>

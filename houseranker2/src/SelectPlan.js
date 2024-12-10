@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Typography from '@mui/material/Typography';
 import CheckoutPage from "./CheckoutPage";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
+import { useSearchParams } from "react-router-dom";
 
 if (process.env.REACT_APP_STRIPE_PUBLIC_KEY === undefined) {
   throw new Error("REACT_APP_STRIPE_PUBLIC_KEY is not defined");
@@ -10,8 +11,18 @@ if (process.env.REACT_APP_STRIPE_PUBLIC_KEY === undefined) {
 const stripePromise = loadStripe(String(process.env.REACT_APP_STRIPE_PUBLIC_KEY));
 function SelectPlan() {
   const [selectedPlan, setSelectedPlan] = useState("2-tier");
-  
-  const prices = {"1-tier": 7, "2-tier": 15, "3-tier": 20}
+  const [searchParams] = useSearchParams();
+  const [paymentStatus, setPaymentStatus] = useState(null);
+
+  useEffect(() => {
+    const redirectStatus = searchParams.get("redirect_status"); // 'succeeded' or 'failed'
+    if (redirectStatus) {
+      setPaymentStatus(redirectStatus);
+    }
+  }, [searchParams]);
+
+
+  const prices = {"1-tier": 7.5, "2-tier": 15.5, "3-tier": 20.5}
   const plans = [
     {
       id: "1-tier",
@@ -58,6 +69,16 @@ function SelectPlan() {
           </div>
         ))}
       </div>
+      {paymentStatus === "succeeded" && (
+        <div style={{ color: "green" }}>
+          <p>🎉 Your payment was successful! Thank you for your purchase.</p>
+        </div>
+      )}
+      {paymentStatus === "failed" && (
+        <div style={{ color: "red" }}>
+          <p>⚠️ Payment failed. Please try again.</p>
+        </div>
+      )}
       <Elements
         stripe={stripePromise}
         options={{
@@ -67,6 +88,9 @@ function SelectPlan() {
         }}
       >
         <CheckoutPage amount={prices[selectedPlan]*100} />
+        <button onClick={() => (window.location.href = "/dashboard")}>
+        Return to Dashboard
+      </button>
       </Elements>
     </div>
   );

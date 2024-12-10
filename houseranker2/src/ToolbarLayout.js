@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect,useCallback,useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AppBar,
@@ -13,15 +13,30 @@ import {
   Box,
   Typography,
 } from "@mui/material";
+import {  doc, getDoc } from "firebase/firestore"; // Import Firestore functions
 
 
-const ToolbarLayout = ({ user }) => {
+const ToolbarLayout = ({ user, db }) => {
   const navigate = useNavigate();
-
   const [drawerOpen, setDrawerOpen] = useState(false);
-
+  const [userData, setUserData] = useState({});
   const handleProfileIconClick = () => setDrawerOpen(true);
   const closeDrawer = () => setDrawerOpen(false);
+
+
+  const fetchData = useCallback(async () => {
+    if(user && drawerOpen)
+    {
+      const userDocRef = doc(db, "users", user); // Reference to the user's document
+      const userDoc = await getDoc(userDocRef); // Fetch the document
+      const data = userDoc.data();
+
+      setUserData(data);
+    }
+  });
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   return (
     <Box sx={{ flexGrow: 1 }}>
@@ -38,7 +53,7 @@ const ToolbarLayout = ({ user }) => {
           {/* User Icon */}
           <IconButton onClick={handleProfileIconClick} edge="end">
             <img
-              src={user.profilePic}
+              src={""}
               alt="Profile"
               style={{ width: 20, height: 20, borderRadius: "50%" }}
             />
@@ -62,22 +77,22 @@ const ToolbarLayout = ({ user }) => {
           {/* User Info */}
           <List>
             <ListItem>
-              <ListItemText primary="Email" secondary={user.email} />
+              <ListItemText primary="Email" secondary={userData.email} />
             </ListItem>
             <ListItem>
               <ListItemText
                 primary="Account Created"
-                secondary={user.createdAt}
+                secondary={userData.createdAt}
               />
             </ListItem>
             <ListItem>
               <ListItemText
                 primary="Tokens :"
-                secondary={"Point of Interest: "+ user && user.tokens ?  user.tokens["pointsOfInterest"] : 0 }
+                secondary={"Point of Interest: "+ userData && userData.tokens ?  userData.tokens["pointsOfInterest"] : 0 }
               />
               <ListItemText
                 primary="."
-                secondary={"Point of Interest: "+ user && user.tokens ? user.tokens["entries"] : 0}
+                secondary={"Point of Interest: "+ userData && userData.tokens ? userData.tokens["entries"] : 0}
               />
             </ListItem>
           </List>
