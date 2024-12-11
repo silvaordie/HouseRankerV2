@@ -3,11 +3,15 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { useMap } from 'react-leaflet';
 
-const CenterUpdater = ({ center }) => {
+const CenterUpdater = ({ center, triggerUpdate }) => {
     const map = useMap();
 
-    // Programmatically set the map center
-    map.setView(center);
+    // Center the map only when triggerUpdate is true
+    useEffect(() => {
+        if (triggerUpdate) {
+            map.setView(center);
+        }
+    }, [center, triggerUpdate, map]);
 
     return null; // This component doesn't render anything
 };
@@ -15,6 +19,7 @@ const CenterUpdater = ({ center }) => {
 
 const MapComponent = ({ pointsOfInterest }) => {
     const [meanGeolocation, setMeanGeolocation] = useState({ lat: 0, lon: 0 });
+    const [triggerCenterUpdate, setTriggerCenterUpdate] = useState(false);
 
     // Calculate the mean geolocation whenever pointsOfInterest changes
     useEffect(() => {
@@ -37,8 +42,18 @@ const MapComponent = ({ pointsOfInterest }) => {
         // Update the mean geolocation whenever pointsOfInterest changes
         if (Object.keys(pointsOfInterest).length > 0) {
             setMeanGeolocation(getMeanGeolocation(pointsOfInterest));
+            setTriggerCenterUpdate(true); // Trigger map centering
         }
     }, [pointsOfInterest]);  // Dependency on pointsOfInterest
+
+        // Reset the trigger after the map has been centered
+        useEffect(() => {
+            if (triggerCenterUpdate) {
+                const timer = setTimeout(() => setTriggerCenterUpdate(false), 500);
+                return () => clearTimeout(timer); // Cleanup timeout
+            }
+        }, [triggerCenterUpdate]);
+        
     return (
         <div className="map-container" style={{ height: '100%', width: '100%' }}>
             <MapContainer
@@ -49,8 +64,10 @@ const MapComponent = ({ pointsOfInterest }) => {
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
                 {/* Update map center when meanGeolocation changes */}
-                <CenterUpdater center={[meanGeolocation.lat, meanGeolocation.lon]} />
-                
+                <CenterUpdater
+                    center={[meanGeolocation.lat, meanGeolocation.lon]}
+                    triggerUpdate={triggerCenterUpdate}
+                />                
                 {/* Markers for each point of interest */}
                 {Object.values(pointsOfInterest).map((poi, index) => (
                     <Marker

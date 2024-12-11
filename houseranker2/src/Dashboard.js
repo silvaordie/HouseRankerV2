@@ -49,6 +49,7 @@ const Dashboard = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [distances, setDistances] = useState({});
   const [outOfTokens, setOutOfTokens] = useState(false);
+  const [sortConfig, setSortConfig] = React.useState({ key: "Score", direction: 'dsc' });
 
   const updateUserData = async () => {
     if (currentUser) { // Ensure currentUser is defined
@@ -65,6 +66,48 @@ const Dashboard = () => {
       }
     }
   };
+
+
+  useEffect(() => {
+    if (!entries || Object.keys(entries).length === 0) return;
+
+    const calculateScores = () => {
+      const updatedEntries = { ...entries };
+
+      Object.entries(updatedEntries).forEach(([entryId, entry]) => {
+        let score = 0;
+
+        // Base score calculation logic
+        for (const [field, value] of Object.entries({
+          "Price": entry.info.Price,
+          "Size": entry.info.Size,
+          "Typology": entry.info.Typology,
+          "Coziness": entry.info.Coziness,
+        })) {
+          if (field === "Price") {
+            score += userMaxs[field] !== userStats[field]
+              ? ((userMaxs[field] - value) * sliderValues[field]) /
+              (userMaxs[field] - userStats[field])
+              : 0;
+          } else {
+            score += userMaxs[field] !== userStats[field]
+              ? ((value - userMaxs[field]) * sliderValues[field]) /
+              (userStats[field] - userMaxs[field])
+              : 0;
+          }
+        }
+
+        entry.score = score; // Store score in entry object
+      });
+
+      setEntries(updatedEntries); // Update state with calculated scores
+    };
+
+    calculateScores();
+  }, [entries, sliderValues, userMaxs, userStats]);
+
+
+
   useEffect(() => {
     const getDistanceBetween = async (entryId, poiId, method) => {
       const docRef = doc(db, "distances", entryId);
@@ -177,7 +220,6 @@ const Dashboard = () => {
         console.error("Error fetching user data:", error.message);
       } finally {
       }
-
     }
   }, [currentUser]);
 
@@ -189,9 +231,7 @@ const Dashboard = () => {
     if (currentUser) {
       try {
         const userDocRef = doc(db, "users_entries", currentUser.uid);
-
         // Set the document with merge: true to update only specified fields or create if doesn't exist
-
         await updateDoc(userDocRef, updatedData, { merge: true });
         console.log("User data updated or created successfully!");
       } catch (error) {
@@ -216,35 +256,34 @@ const Dashboard = () => {
   };
   // Open modal for adding or editing
   const openModal = async (point = null) => {
-    if (userData && userData.tokens.pointsOfInterest > 0) {
-      const docRef = doc(db, "users", currentUser.uid);
-      const docSnapshot = await getDoc(docRef);
-
-      const data = docSnapshot.data();
-      console.log("aaaaaaaaa")
-      if (data.tokens.pointsOfInterest > 0) {
-        if (point) {
-          setAddress(point);
-          setPoiSliders(pointsOfInterest[point].importance);
-          setName(pointsOfInterest[point].name);
-          if (pointsOfInterest[point].maxs) { setMaxs(pointsOfInterest[point].maxs) }
-          setCurrentPoint(point);
-        } else {
-          setAddress('');
-          setPoiSliders({ "walking": 0, "car": 0, "transport": 0 });
-          setCurrentPoint(null);
-        }
+    if (userData) {
+      if (point) {
+        setAddress(point);
+        setPoiSliders(pointsOfInterest[point].importance);
+        setName(pointsOfInterest[point].name);
+        if (pointsOfInterest[point].maxs) { setMaxs(pointsOfInterest[point].maxs) }
+        setCurrentPoint(point);
         setIsNewPointOpen(true);
-      }
-      else {
-        console.log("asdasd")
-        setOutOfTokens(true);
+      } else {
+        if (userData && userData.tokens.pointsOfInterest > 0) {
+          const docRef = doc(db, "users", currentUser.uid);
+          const docSnapshot = await getDoc(docRef);
+
+          const data = docSnapshot.data();
+          if (data.tokens.pointsOfInterest > 0) {
+            setAddress('');
+            setPoiSliders({ "walking": 0, "car": 0, "transport": 0 });
+            setCurrentPoint(null);
+            setIsNewPointOpen(true);
+          }
+          else {
+            setOutOfTokens(true);
+          }
+        }
+        else
+          setOutOfTokens(true);
       }
     }
-    else {
-      console.log("asdasd")
-      setOutOfTokens(true);
-    };
   };
 
   const consumeToken = async (collectionPath) => {
@@ -252,12 +291,13 @@ const Dashboard = () => {
     const userDoc = await getDoc(userDocRef); // Fetch the document
     const data = userDoc.data();
 
-    const newTokens = data.tokens[collectionPath] -1;
-    
-    await setDoc(userDocRef,{
+    const newTokens = data.tokens[collectionPath] - 1;
+
+    await setDoc(userDocRef, {
       tokens: {
         [collectionPath]: newTokens,
-      }},{merge:true}
+      }
+    }, { merge: true }
     );
   }
 
@@ -351,14 +391,15 @@ const Dashboard = () => {
   const renderTableHeaders = () => {
 
     const baseHeaders = [
-      'Link',
-      'Address',
-      'Description',
-      'Price',
-      'Typology',
-      'Size',
-      'Coziness'
+      { key: 'Link', label: 'Link', sortable: false },
+      { key: 'Address', label: 'Address', sortable: false },
+      { key: 'Description', label: 'Description', sortable: false },
+      { key: 'Price', label: 'Price', sortable: true },
+      { key: 'Typology', label: 'Typology', sortable: true },
+      { key: 'Size', label: 'Size', sortable: true },
+      { key: 'Coziness', label: 'Coziness', sortable: true },
     ];
+
 
     // First header row with only point of interest names and addresses
     const interestPointHeaders = Object.entries(pointsOfInterest).map(([point, value], index) => (
@@ -386,9 +427,16 @@ const Dashboard = () => {
 
         {/* Second row: Base headers and repeated distance headers */}
         <tr>
-          {baseHeaders.map((header, index) => (
-            <th key={index} style={{ textAlign: 'left' }}>
-              {header}
+          {baseHeaders.map((header) => (
+            <th
+              key={header.key}
+              style={{ textAlign: 'left', cursor: 'pointer' }}
+              onClick={header.sortable ? () => handleSort(header.key) : null} // Only attach onClick for sortable columns
+            >
+              {header.key}
+              {header.sortable ? (sortConfig.key === header.key ? (
+                <i className={`fas fa-chevron-${sortConfig.direction === 'asc' ? 'up' : 'down'}`} style={{ marginLeft: '5px' }} />
+              ) : <i className="fas fa-sort" style={{ marginLeft: '5px', color: 'lightgrey' }}></i>) : null}
             </th>
           ))}
           {distanceHeaders.map((header, index) => (
@@ -400,17 +448,63 @@ const Dashboard = () => {
               />
             </th>
           ))}
-          <th>Score</th> {/* Final column header for 'Score' */}
+          <th
+            style={{ textAlign: 'left', cursor: 'pointer' }}
+            onClick={() => handleSort('Score')}
+          >
+            Score
+            {sortConfig.key === 'Score' ? (
+              <i className={`fas fa-chevron-${sortConfig.direction === 'asc' ? 'up' : 'down'}`} style={{ marginLeft: '5px' }} />
+            ) : <i className="fas fa-sort" style={{ marginLeft: '5px', color: 'lightgrey' }}></i>}
+          </th>
         </tr>
       </React.Fragment>
     );
   };
 
+  const handleSort = (key) => {
+    setSortConfig((prevConfig) => ({
+      key,
+      direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
+
+  const sortedEntries = React.useMemo(() => {
+    if (!sortConfig.key) return Object.entries(entries);
+
+    return [...Object.entries(entries)].sort((a, b) => {
+      const [aKey, aEntry] = a;
+      const [bKey, bEntry] = b;
+
+      let aValue, bValue;
+
+      // Handle "Score" key separately since it's stored directly in the entry
+      if (sortConfig.key === 'Score') {
+        aValue = aEntry.score || 0;
+        bValue = bEntry.score || 0;
+      } else {
+        // Default to the `info` object for other keys
+        aValue = aEntry.info[sortConfig.key];
+        bValue = bEntry.info[sortConfig.key];
+      }
+
+      // Ensure proper handling of null/undefined values
+      aValue = aValue ?? '';
+      bValue = bValue ?? '';
+
+      // Ascending order comparison
+      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+
+      return 0; // Values are equal
+    });
+  }, [entries, sortConfig]);
 
   const renderTableRows = () => {
     if (currentUser) {
       updateUserData();
-      return Object.entries(entries).map(([entryId, entry], rowIndex) => {
+
+      return sortedEntries.map(([entryId, entry], rowIndex) => {
         let score = 0;
         for (const [field, value] of Object.entries({ "Price": entry.info["Price"], "Size": entry.info["Size"], "Typology": entry.info["Typology"], "Coziness": entry.info["Coziness"] })) {
           if (field === "Price") {
@@ -463,7 +557,7 @@ const Dashboard = () => {
           >
             {baseDataCells}
             {interestPointDataCells}
-            <td>{score}</td>
+            <td>{Number(score).toFixed(0)}</td>
           </tr>
         );
       });
@@ -483,14 +577,14 @@ const Dashboard = () => {
   };
 
   const openAddEntryModal = () => {
-    setCurrentEntry({ Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Coziness: '' });
+    setCurrentEntry({"info":{ Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Coziness: '' }});
     setIsEditing(false);
     setIsNewHouseOpen(true);
   };
 
   // Open modal for editing an entry, ensuring `currentEntry` is defined
   const openEditEntryModal = (entry) => {
-    setCurrentEntry(entry || { Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Coziness: '' });
+    setCurrentEntry(entry || {"info":{ Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Coziness: '' }});
     setIsEditing(true);
     setIsNewHouseOpen(true);
   };
@@ -498,21 +592,38 @@ const Dashboard = () => {
   // Update function for input fields in the modal
   const handleNewEntryChange = (field, value) => {
     if (field === "Address" || field === "Link" || field === "Description")
-      setCurrentEntry(prev => ({ ...prev, [field]: value }));
-    else
+      setCurrentEntry((prev) => ({
+        ...prev,
+        info: {
+            ...prev.info, // Spread the existing fields in `info`
+            [field]: value, // Update the specific field in `info`
+        },
+    }));
+        else
       if (field !== "Coziness" || (field === "Coziness" && Number(value) >= 0 && Number(value) <= 5))
-        setCurrentEntry(prev => ({ ...prev, [field]: Number(value) }));
-  };
+        setCurrentEntry((prev) => ({
+          ...prev,
+          info: {
+              ...prev.info, // Spread the existing fields in `info`
+              [field]: Number(value), // Update the specific field in `info`
+          },
+      }));
+        };
 
   const handleAddressChange = (newAddress, newGeolocation) => {
     setAddress(newAddress);  // Save the address
     setGeolocation(newGeolocation);  // Save the geolocation (latitude, longitude)
   };
-
   const saveOrUpdateEntry = () => {
     if (currentEntry) {
-      entries[currentEntry.Address] = { "info": currentEntry, "score": entries[currentEntry.Address] ? entries[currentEntry.Address].score : 0 };
-      add_update_place("entries", currentEntry.Address, currentEntry)
+      const updatedEntry = currentEntry;
+      updatedEntry.info.Address = address;
+      setEntries((prevEntries) => ({
+        ...prevEntries,
+        [address]: { "info": updatedEntry.info, "score": prevEntries[address] ? prevEntries[address].score : 0 },
+      }));
+
+      add_update_place("entries", address, updatedEntry.info)
     }
     setIsNewHouseOpen(false); // Close the modal
   };
@@ -674,10 +785,20 @@ const Dashboard = () => {
         <Box className="modal-box" style={{ display: 'flex', flexDirection: 'column' }}>
           <Typography variant="h6">{isEditing ? 'Edit Entry' : 'Add New Entry'}</Typography>
           {['Link', 'Address', 'Description', 'Typology', 'Size', 'Price', 'Coziness'].map(field => (
-            <TextField
+            field === "Address" ?
+            
+              <AddressSearch
+                key={"Address"}
+                label={"Address"}
+                value={currentEntry && currentEntry.info && currentEntry.info["Address"]} // Show currentEntry values
+                disableInteraction={isEditing}
+                onChange={handleAddressChange} // Pass both address and geolocation
+              />
+            :
+              <TextField
               key={field}
               label={field}
-              value={(currentEntry && currentEntry && currentEntry[field]) || ''} // Show currentEntry values
+              value={(currentEntry && currentEntry.info && currentEntry.info[field]) || ''} // Show currentEntry values
               disabled={isEditing && (field === "Link" || field === "Address")}
               onChange={(e) => handleNewEntryChange(field, e.target.value)}
               fullWidth
