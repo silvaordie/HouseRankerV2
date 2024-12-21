@@ -1,4 +1,4 @@
-import React, { useEffect,useCallback,useState } from "react";
+import React, { useEffect, useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AppBar,
@@ -13,7 +13,7 @@ import {
   Box,
   Typography,
 } from "@mui/material";
-import {  doc, getDoc } from "firebase/firestore"; // Import Firestore functions
+import { doc, getDoc } from "firebase/firestore"; // Import Firestore functions
 
 
 const ToolbarLayout = ({ user, db }) => {
@@ -23,20 +23,31 @@ const ToolbarLayout = ({ user, db }) => {
   const handleProfileIconClick = () => setDrawerOpen(true);
   const closeDrawer = () => setDrawerOpen(false);
 
-
+  // Define the fetchData function
   const fetchData = useCallback(async () => {
-    if(user && drawerOpen)
-    {
-      const userDocRef = doc(db, "users", user); // Reference to the user's document
-      const userDoc = await getDoc(userDocRef); // Fetch the document
-      const data = userDoc.data();
+    if (user && !userData.email) {
+      try {
+        const userDocRef = doc(db, "users", user); // Reference to the user's document
+        const userDoc = await getDoc(userDocRef); // Fetch the document
+        const data = userDoc.data();
 
-      setUserData(data);
+        if (data) {
+          setUserData(data);
+          localStorage.setItem("userData", JSON.stringify(data));
+        } else {
+          console.error("No user data found.");
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
     }
-  });
+  }, [user, db, setUserData, userData]); // Dependencies
+
+  // Trigger fetchData when the component is loaded
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, [fetchData]); // Dependency to call fetchData when its memoized value changes
+
 
   return (
     <Box sx={{ flexGrow: 1 }}>
@@ -48,17 +59,48 @@ const ToolbarLayout = ({ user, db }) => {
       >
         <Toolbar>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
+            {/* Add your main toolbar title or content here if needed */}
           </Typography>
 
-          {/* User Icon */}
-          <IconButton onClick={handleProfileIconClick} edge="end">
-            <img
-              src={""}
-              alt="Profile"
-              style={{ width: 20, height: 20, borderRadius: "50%" }}
-            />
-          </IconButton>
+          {/* Email and Clickable Circle */}
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            {/* User Email */}
+            <Typography variant="body2" sx={{ marginRight: 1 }}>
+              {userData.email}
+            </Typography>
+
+            {/* Clickable Circle */}
+            <IconButton
+              onClick={handleProfileIconClick}
+              sx={{
+                width: 32,
+                height: 32,
+                padding: 0, // Remove extra padding from IconButton
+              }}
+            >
+              <Box
+                sx={{
+                  width: 32,
+                  height: 32,
+                  backgroundColor: "blue",
+                  color: "white",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 14,
+                  fontWeight: "bold",
+                  textTransform: "uppercase",
+                }}
+              >
+                {userData.email ? userData.email[0] : ''}
+              </Box>
+            </IconButton>
+          </Box>
         </Toolbar>
+
+
+
       </AppBar>
 
       {/* Main Content with Margin-Top to Offset Toolbar */}
@@ -88,11 +130,11 @@ const ToolbarLayout = ({ user, db }) => {
             <ListItem>
               <ListItemText
                 primary="Tokens :"
-                secondary={"Point of Interest: "+ userData && userData.tokens ?  userData.tokens["pointsOfInterest"] : 0 }
+                secondary={"Point of Interest: " + userData && userData.tokens ? userData.tokens["pointsOfInterest"] : 0}
               />
               <ListItemText
                 primary="."
-                secondary={"Point of Interest: "+ userData && userData.tokens ? userData.tokens["entries"] : 0}
+                secondary={"Point of Interest: " + userData && userData.tokens ? userData.tokens["entries"] : 0}
               />
             </ListItem>
           </List>

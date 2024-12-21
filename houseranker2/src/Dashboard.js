@@ -1,5 +1,5 @@
 // Dashboard.js
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Modal from '@mui/material/Modal';
 import Box from '@mui/material/Box';
 import Slider from '@mui/material/Slider';
@@ -21,38 +21,53 @@ import { useNavigate } from "react-router-dom";
 
 import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/functions";
 
-//import { calculateDistance } from '../functions';
 
 const Dashboard = () => {
+  const useStateWithCache = (key, defaultValue) => {
+
+    const [value, setValue] = useState(() => {
+
+      const cachedValue = localStorage.getItem(key);
+      return cachedValue !== "undefined" ? JSON.parse(cachedValue) : defaultValue;
+    });
+
+    const setCachedValue = (newValue) => {
+      setValue(newValue); // Update React state
+
+      localStorage.setItem(key, JSON.stringify(newValue)); // Update cache
+    };
+
+    return [value, setCachedValue];
+  };
+
   const navigate = useNavigate();
 
   //const navigate = useNavigate();
   const { currentUser } = useAuth(); // Access currentUser directly from context
-  const [userStats, setUserStats] = useState({});
-  const [userMaxs, setUserMaxs] = useState({});
-  const [sliderValues, setSliderValues] = useState([0, 0, 0, 0]); // Initial sliders
-  const [entries, setEntries] = useState({}); // Entries for the table
+  const [userStats, setUserStats] = useStateWithCache("userStats", {});
+  const [userMaxs, setUserMaxs] = useStateWithCache("userMaxs", {});
+  const [sliderValues, setSliderValues] = useStateWithCache("sliderValues", { "Size": 0, "Typology": 0, "Price": 0, "Coziness": 0 }); // Initial sliders
+  const [entries, setEntries] = useStateWithCache("entries", {});
   const [isNewHouseOpen, setIsNewHouseOpen] = useState(false); // Modal state for adding new entry
 
-  const [pointsOfInterest, setPointsOfInterest] = useState({});
+  const [pointsOfInterest, setPointsOfInterest] = useStateWithCache("pointsOfInterest", {});
   const [isNewPointOpen, setIsNewPointOpen] = useState(false);
   const [currentPoint, setCurrentPoint] = useState(null); // To track if editing an existing point
 
-  const [userData, setUserData] = useState({});
+  const [userData, setUserData] = useStateWithCache("userData", {});
   const [address, setAddress] = useState('');
   const [name, setName] = useState('');
   const [geolocation, setGeolocation] = useState({ lat: null, lon: null });
-  const [sliders, setSliders] = useState({ "Size": 0, "Typology": 0, "Price": 0, "Coziness": 0 });
   const [poiSliders, setPoiSliders] = useState({ "walking": 0, "car": 0, "transport": 0 });
   const [maxs, setMaxs] = useState({});
   const [currentEntry, setCurrentEntry] = useState(null); // For both adding and editing
   const [isEditing, setIsEditing] = useState(false);
-  const [distances, setDistances] = useState({});
+  const [distances, setDistances] = useStateWithCache("distances", {});
   const [outOfTokens, setOutOfTokens] = useState(false);
   const [sortConfig, setSortConfig] = React.useState({ key: "Score", direction: 'dsc' });
 
-  const updateUserData = async () => {
-    if (currentUser) { // Ensure currentUser is defined
+  /*const updateUserData = async () => {
+    if (currentUser && (!sliderValues || !userMaxs || !userStats)) { // Ensure currentUser is defined
       try {
         const userDocRef = doc(db, "users_entries", currentUser.uid); // Reference to the user's document
         const userDoc = await getDoc(userDocRef); // Fetch the document
@@ -65,15 +80,12 @@ const Dashboard = () => {
       } finally {
       }
     }
-  };
-
+  };*/
 
   useEffect(() => {
     if (!entries || Object.keys(entries).length === 0) return;
-
     const calculateScores = () => {
       const updatedEntries = { ...entries };
-
       Object.entries(updatedEntries).forEach(([entryId, entry]) => {
         let score = 0;
 
@@ -86,146 +98,153 @@ const Dashboard = () => {
         })) {
           if (field === "Price") {
             score += userMaxs[field] !== userStats[field]
-              ? ((userMaxs[field] - value) * sliderValues[field]) /
+              ? ((userMaxs[field] - value) * 5 * sliderValues[field]) /
               (userMaxs[field] - userStats[field])
               : 0;
           } else {
             score += userMaxs[field] !== userStats[field]
-              ? ((value - userMaxs[field]) * sliderValues[field]) /
+              ? ((value - userMaxs[field]) * 5 * sliderValues[field]) /
               (userStats[field] - userMaxs[field])
               : 0;
           }
         }
 
-        entry.score = score; // Store score in entry object
+        Object.entries(pointsOfInterest).forEach(([pointId, point]) => {
+          for (const [field, value] of Object.entries(point.maxs)) {
+            score += (((distances[entryId] && distances[entryId][pointId] && distances[entryId][pointId][field] < value) ? ((value - distances[entryId][pointId][field]) * 5) / value : 0) * point["importance"][field])
+          }
+        });
+
+        entry.Score = score;
       });
 
       setEntries(updatedEntries); // Update state with calculated scores
     };
-
     calculateScores();
-  }, [entries, sliderValues, userMaxs, userStats]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entries, sliderValues, userMaxs, userStats, pointsOfInterest, distances]);
 
 
+  const processedPairs = useRef(new Set());
 
-  useEffect(() => {
-    const getDistanceBetween = async (entryId, poiId, method) => {
+
+  const getDistanceBetween = async (entryId, poiId) => {
+    if (entryId) {
+      const functions = getFunctions();
+      connectFunctionsEmulator(functions, "localhost", 5001);
+      const checkPoint = httpsCallable(functions, "calculateDistance");
+
+      const result = await checkPoint({ entryId, poiId });
+      // Update distances state with fetched result
+      setDistances(prevDistances => ({
+        ...prevDistances,
+        [entryId]: {
+          ...prevDistances[entryId],
+          [poiId]: result.data,
+        },
+      }));
+
+      // Save the result to Firestore
       const docRef = doc(db, "distances", entryId);
-      const docSnapshot = await getDoc(docRef);
+      await setDoc(docRef, { [poiId]: result.data }, { merge: true });
 
-      if (!docSnapshot.exists()) {
-        try {
-          await setDoc(docRef, {});
-        } catch (error) {
-          console.log(error.message);
-        }
-      }
 
-      const docData = docSnapshot.data();
+      // Mark this entry-POI pair as processed
+      processedPairs.current.add(`${entryId}-${poiId}`);
+    }
+  };
 
-      if (docData && docData[poiId]) {
-        // When the data is already present in Firestore, update distances state correctly
-        setDistances(prevDistances => ({
-          ...prevDistances,
-          [entryId]: {
-            ...prevDistances[entryId],
-            [poiId]: docData[poiId],
-          },
-        }));
-      } else {
-        const functions = getFunctions(); // Get the functions instance
-        connectFunctionsEmulator(functions, "localhost", 5001);  // Make sure emulator is running
-        const checkPoint = httpsCallable(functions, "calculateDistance");
+  const [distancesLoaded, setDistancesLoaded] = useState(false);
+  const loadDistances = async () => {
+    if (!distancesLoaded && entries && pointsOfInterest) {
+      for (const [entryId, entry] of Object.entries(entries)) {
 
-        const result = await checkPoint({ entryId, poiId });
+        const docRef = doc(db, "distances", entryId);
+        const docSnapshot = await getDoc(docRef);
 
-        // When the result is fetched, update the distances state
-        setDistances(prevDistances => ({
-          ...prevDistances,
-          [entryId]: {
-            ...prevDistances[entryId],
-            [poiId]: result.data,
-          },
-        }));
-
-        // Save the result to Firestore
-        await setDoc(docRef, { [poiId]: result.data }, { merge: true });
-      }
-    };
-
-    // Iterate over entries and points of interest
-    Object.keys(entries).forEach(entryId => {
-      Object.keys(pointsOfInterest).forEach(poiId => {
-        getDistanceBetween(entryId, poiId);
-      });
-    });
-  }, [pointsOfInterest, entries]);
-
+        const docData = docSnapshot.data();
+        Object.entries(pointsOfInterest).forEach(([poiId, poi]) => {
+          if (docData && docData[poiId]) {
+            setDistances(prevDistances => ({
+              ...prevDistances,
+              [entryId]: {
+                ...prevDistances[entryId],
+                [poiId]: docData[poiId],
+              },
+            }));
+          }
+          else {
+            getDistanceBetween(entryId, poiId)
+          }
+        });
+        setDistancesLoaded(true);
+      };
+    }
+  }
 
   const fetchData = useCallback(async () => {
-    if (currentUser) { // Ensure currentUser is defined
-      //const result = checkPoint({ entryId:"1", poiId:"37, Spalentorweg, Am Ring, Grossbasel, Basel, Basel-City, 4051, Switzerland" });
-
+    if (currentUser) {
       try {
-        const userRef = doc(db, "users", currentUser.uid); // Reference to the user's document
-        const udoc = await getDoc(userRef); // Fetch the document
-
-        setUserData(udoc.data())
-
-        const userDocRef = doc(db, "users_entries", currentUser.uid); // Reference to the user's document
-        const userDoc = await getDoc(userDocRef); // Fetch the document
+        const userRef = doc(db, "users", currentUser.uid);
+        const udoc = await getDoc(userRef);
+        setUserData(udoc.data());
+  
+        const userDocRef = doc(db, "users_entries", currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
         let data = userDoc.data();
         setSliderValues(data.sliderValues || { "Size": 0, "Typology": 0, "Price": 0, "Coziness": 0 });
         setUserMaxs(data.maxs || {});
         setUserStats(data.stats || {});
-
-        ["entries", "pointsOfInterest"].forEach(async (typ) => {
+  
+        const entriesJson = {};
+        const pointsOfInterestJson = {};
+  
+        for (const typ of ["entries", "pointsOfInterest"]) {
           const collectionRef = collection(db, `users_${typ}/${currentUser.uid}/${typ}`);
           const querySnapshot = await getDocs(collectionRef);
-          let jsonResult = {};
-
-          if (typ === "entries") {
-            querySnapshot.forEach((doc) => {
-              jsonResult[doc.id] = { "info": doc.data() };
-            });
-            setEntries(jsonResult || {});
-          }
-          else {
-            const poiCollectionRef = collection(db, "pointsOfInterest");
-
-            for (const userPOIDoc of querySnapshot.docs) {
-              const poiId = userPOIDoc.id; // ID corresponds to the key in the main POI collection
-              const userPOIData = userPOIDoc.data();
-
-              // Fetch geolocation data from the main POI collection
-              const poiDocRef = doc(poiCollectionRef, poiId);
-              const poiDocSnapshot = await getDoc(poiDocRef);
-
-              if (poiDocSnapshot.exists()) {
-                const poiData = poiDocSnapshot.data();
-                // Merge user's POI data with the geolocation data
-                jsonResult[poiId] = {
-                  ...userPOIData,
-                  geolocation: poiData.geoloc, // Include geolocation
+          const mainCollectionRef = collection(db, typ);
+  
+          for (const userDoc of querySnapshot.docs) {
+            const docId = userDoc.id;
+            const userDocData = userDoc.data();
+            const mainDocRef = doc(mainCollectionRef, docId);
+            const mainDocSnapshot = await getDoc(mainDocRef);
+  
+            if (mainDocSnapshot.exists()) {
+              const mainDocData = mainDocSnapshot.data();
+              if (typ === "entries") {
+                entriesJson[docId] = {
+                  info: userDocData,
+                  geolocation: mainDocData.geoloc,
                 };
-
               } else {
-                console.warn(`POI with ID ${poiId} does not exist in the main collection.`);
+                pointsOfInterestJson[docId] = {
+                  ...userDocData,
+                  geolocation: mainDocData.geoloc,
+                };
               }
             }
-            setPointsOfInterest(jsonResult || {});
           }
-        })
+        }
+  
+        setEntries(entriesJson || {});
+        setPointsOfInterest(pointsOfInterestJson || {});
       } catch (error) {
         console.error("Error fetching user data:", error.message);
       } finally {
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
-
+  
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, [fetchData]);  
+
+  useEffect(() => {
+    loadDistances();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entries, pointsOfInterest]);
 
   const saveUserData = async (updatedData) => {
     if (currentUser) {
@@ -307,6 +326,41 @@ const Dashboard = () => {
 
     if (!docSnap.exists()) {
       await setDoc(docRef, { "geoloc": geolocation, "createdOn": new Date().toISOString() });
+      if (collectionPath === "entries") {
+        Object.keys(pointsOfInterest).forEach(poiId => {
+          getDistanceBetween(documentId, poiId);
+        });
+      }
+      else {
+        Object.keys(entries).forEach(entryId => {
+          getDistanceBetween(entryId, documentId);
+        });
+      }
+    }
+    else {
+      if (collectionPath === "entries") {
+        const docRef = doc(db, "distances", documentId);
+        const docSnapshot = await getDoc(docRef);
+
+        const docData = docSnapshot.data();
+        Object.keys(pointsOfInterest).forEach(poiId => {
+          if (docData && docData[poiId])
+            setDistances(prevDistances => ({
+              ...prevDistances,
+              [documentId]: {
+                ...prevDistances[documentId],
+                [poiId]: docData[poiId],
+              },
+            }));
+          else
+            getDistanceBetween(documentId, poiId);
+        });
+      }
+      else {
+        Object.keys(entries).forEach(entryId => {
+          getDistanceBetween(entryId, documentId);
+        });
+      }
     }
 
     const path = "users_" + collectionPath;
@@ -365,11 +419,6 @@ const Dashboard = () => {
     setSliderValues(updatedSliders);
     saveUserData({ sliderValues: updatedSliders });
   };
-
-  // Function to handle slider value change
-  const functions = getFunctions(); // Get the functions instance
-  connectFunctionsEmulator(functions, "localhost", 5001);
-  const checkPoint = httpsCallable(functions, "calculateDistance"); // Reference the Cloud Function
 
   /*  const addNewE ntry = () => {
       const newEntries = [...entries, newEntry];
@@ -471,17 +520,16 @@ const Dashboard = () => {
 
   const sortedEntries = React.useMemo(() => {
     if (!sortConfig.key) return Object.entries(entries);
-
     return [...Object.entries(entries)].sort((a, b) => {
-      const [aKey, aEntry] = a;
-      const [bKey, bEntry] = b;
+      const [trash1, aEntry] = a;
+      const [trash2, bEntry] = b;
 
       let aValue, bValue;
 
       // Handle "Score" key separately since it's stored directly in the entry
       if (sortConfig.key === 'Score') {
-        aValue = aEntry.score || 0;
-        bValue = bEntry.score || 0;
+        aValue = aEntry.Score || 0;
+        bValue = bEntry.Score || 0;
       } else {
         // Default to the `info` object for other keys
         aValue = aEntry.info[sortConfig.key];
@@ -499,69 +547,55 @@ const Dashboard = () => {
       return 0; // Values are equal
     });
   }, [entries, sortConfig]);
+  console.log(sortedEntries)
+
+  const tableRows = React.useMemo(() => {
+    if (!currentUser) return null;
+
+    return sortedEntries.map(([entryId, entry], rowIndex) => {
+      const baseDataCells = [
+        <td key="link"><a href={entry.info.Link} target="_blank" rel="noopener noreferrer">{entry.info.Link}</a></td>,
+        <td key="address">{entry.info.Address}</td>,
+        <td key="description">{entry.info.Description}</td>,
+        <td key="price">{entry.info.Price}</td>,
+        <td key="typology">{entry.info.Typology}</td>,
+        <td key="sqMeters">{entry.info.Size}</td>,
+        <td key="coziness">{entry.info.Coziness}</td>,
+      ];
+
+      const interestPointDataCells = Object.entries(pointsOfInterest).map(([pointId, point], index) => [
+        <td key={`walking-${index}`} style={{ textAlign: 'center' }}>
+          {distances[entryId]?.[pointId]?.walking ? `${distances[entryId][pointId].walking} mins` : '- mins'}
+        </td>,
+        <td key={`driving-${index}`} style={{ textAlign: 'center' }}>
+          {distances[entryId]?.[pointId]?.car ? `${distances[entryId][pointId].car} mins` : '- mins'}
+        </td>,
+        <td key={`transport-${index}`} style={{ textAlign: 'center' }}>
+          {distances[entryId]?.[pointId]?.transport ? `${distances[entryId][pointId].transport} mins` : '- mins'}
+        </td>
+      ]);
+
+      return (
+        <tr
+          key={rowIndex}
+          onClick={() => openEditEntryModal(entry)}
+          style={{ cursor: 'pointer', backgroundColor: rowIndex % 2 === 0 ? '#f9f9f9' : '#fff' }}
+        >
+          {baseDataCells}
+          {interestPointDataCells}
+          <td>{Number(entry.Score ?? 0).toFixed(0)}</td>
+        </tr>
+      );
+    });
+  }, [currentUser, sortedEntries, pointsOfInterest, distances]);
 
   const renderTableRows = () => {
     if (currentUser) {
-      updateUserData();
+      //updateUserData();
 
-      return sortedEntries.map(([entryId, entry], rowIndex) => {
-        let score = 0;
-        for (const [field, value] of Object.entries({ "Price": entry.info["Price"], "Size": entry.info["Size"], "Typology": entry.info["Typology"], "Coziness": entry.info["Coziness"] })) {
-          if (field === "Price") {
-            //console.log(field, userMaxs[field]-value, userMaxs[field] - userStats[field])
-            score = score + (userMaxs[field] !== userStats[field] ? ((userMaxs[field] - value) * sliderValues[field]) / (userMaxs[field] - userStats[field]) : 0);
-          }
-          else {
-            //console.log(field, value-userMaxs[field], userMaxs[field] - userStats[field])
-            score = score + (userMaxs[field] !== userStats[field] ? ((value - userMaxs[field]) * sliderValues[field]) / (userStats[field] - userMaxs[field]) : 0);
-          }
-          entry["score"] = score;
-        }
-
-        // Generate the data cells for the base headers
-        const baseDataCells = [
-          <td key="link"><a href={entry.info.Link} target="_blank" rel="noopener noreferrer">{entry.info.Link} </a> </td>,
-          <td key="address">{entry.info.Address}</td>,
-          <td key="description">{entry.info.Description}</td>,
-          <td key="price">{entry.info.Price}</td>,
-          <td key="typology">{entry.info.Typology}</td>,
-          <td key="sqMeters">{entry.info.Size}</td>,
-          <td key="coziness">{entry.info.Coziness}</td>,
-        ];
-
-        // Generate the distance data cells for each point of interest
-        const interestPointDataCells = Object.entries(pointsOfInterest).map(([pointId, point], index) => {
-          for (const [field, value] of Object.entries(point.maxs)) {
-            score += (((distances[entryId] && distances[entryId][pointId] && distances[entryId][pointId][field] < value) ? ((value - distances[entryId][pointId][field]) * 5) / value : 0) * point["importance"][field])
-          }
-          if (!distances[entryId])
-            distances[entryId] = {};
-          return [
-            <td key={`walking-${index}`} style={{ textAlign: 'center' }}>
-              {distances[entryId][pointId] ? `${distances[entryId][pointId]["walking"]} mins` : `- mins`}
-            </td>,
-            <td key={`driving-${index}`} style={{ textAlign: 'center' }}>
-              {distances[entryId][pointId] ? `${distances[entryId][pointId]["car"]} mins` : `- mins`}
-            </td>,
-            <td key={`transport-${index}`} style={{ textAlign: 'center' }}>
-              {distances[entryId][pointId] ? `${distances[entryId][pointId]["transport"]} mins` : `- mins`}
-            </td>
-          ];
-        });
-
-        return (
-          <tr
-            key={rowIndex}
-            onClick={() => openEditEntryModal(entry)}
-            style={{ cursor: 'pointer', backgroundColor: rowIndex % 2 === 0 ? '#f9f9f9' : '#fff' }} // Alternating row colors
-          >
-            {baseDataCells}
-            {interestPointDataCells}
-            <td>{Number(score).toFixed(0)}</td>
-          </tr>
-        );
-      });
-
+      return (
+        tableRows
+      );
     }
     else
       return;
@@ -576,15 +610,31 @@ const Dashboard = () => {
     delUserData("entries", currentEntry.info.Address)
   };
 
-  const openAddEntryModal = () => {
-    setCurrentEntry({"info":{ Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Coziness: '' }});
-    setIsEditing(false);
-    setIsNewHouseOpen(true);
+  const openAddEntryModal = async () => {
+    if (userData && userData.tokens.entries > 0) {
+      const docRef = doc(db, "users", currentUser.uid);
+      const docSnapshot = await getDoc(docRef);
+
+      const data = docSnapshot.data();
+      if (data.tokens.entries > 0) {
+        setAddress('');
+        setPoiSliders({ "walking": 0, "car": 0, "transport": 0 });
+        setCurrentPoint(null);
+        setIsNewHouseOpen(true);
+      }
+
+      setCurrentEntry({ "info": { Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Coziness: '' } });
+      setIsEditing(false);
+      setIsNewHouseOpen(true);
+    }
+    else {
+      setOutOfTokens(true);
+    }
   };
 
   // Open modal for editing an entry, ensuring `currentEntry` is defined
   const openEditEntryModal = (entry) => {
-    setCurrentEntry(entry || {"info":{ Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Coziness: '' }});
+    setCurrentEntry(entry || { "info": { Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Coziness: '' } });
     setIsEditing(true);
     setIsNewHouseOpen(true);
   };
@@ -595,35 +645,39 @@ const Dashboard = () => {
       setCurrentEntry((prev) => ({
         ...prev,
         info: {
-            ...prev.info, // Spread the existing fields in `info`
-            [field]: value, // Update the specific field in `info`
+          ...prev.info, // Spread the existing fields in `info`
+          [field]: value, // Update the specific field in `info`
         },
-    }));
-        else
+      }));
+    else
       if (field !== "Coziness" || (field === "Coziness" && Number(value) >= 0 && Number(value) <= 5))
         setCurrentEntry((prev) => ({
           ...prev,
           info: {
-              ...prev.info, // Spread the existing fields in `info`
-              [field]: Number(value), // Update the specific field in `info`
+            ...prev.info, // Spread the existing fields in `info`
+            [field]: Number(value), // Update the specific field in `info`
           },
-      }));
-        };
+        }));
+  };
 
   const handleAddressChange = (newAddress, newGeolocation) => {
     setAddress(newAddress);  // Save the address
     setGeolocation(newGeolocation);  // Save the geolocation (latitude, longitude)
   };
+
   const saveOrUpdateEntry = () => {
     if (currentEntry) {
       const updatedEntry = currentEntry;
-      updatedEntry.info.Address = address;
+      if (address)
+        updatedEntry.info.Address = address;
+
       setEntries((prevEntries) => ({
         ...prevEntries,
-        [address]: { "info": updatedEntry.info, "score": prevEntries[address] ? prevEntries[address].score : 0 },
+        [address]: { "info": updatedEntry.info, "score": prevEntries[address], "geolocation": geolocation },
       }));
 
-      add_update_place("entries", address, updatedEntry.info)
+      console.log(updatedEntry)
+      add_update_place("entries", updatedEntry.info.Address, updatedEntry.info)
     }
     setIsNewHouseOpen(false); // Close the modal
   };
@@ -741,7 +795,7 @@ const Dashboard = () => {
           {/* Map Section */}
           <div className="map-container">
             <Typography variant="h6" style={{ textAlign: 'center' }}></Typography>
-            <MapComponent pointsOfInterest={pointsOfInterest} />
+            <MapComponent pointsOfInterest={pointsOfInterest} sortedEntries={sortedEntries} />
           </div>
         </div>
 
@@ -786,7 +840,7 @@ const Dashboard = () => {
           <Typography variant="h6">{isEditing ? 'Edit Entry' : 'Add New Entry'}</Typography>
           {['Link', 'Address', 'Description', 'Typology', 'Size', 'Price', 'Coziness'].map(field => (
             field === "Address" ?
-            
+
               <AddressSearch
                 key={"Address"}
                 label={"Address"}
@@ -794,16 +848,16 @@ const Dashboard = () => {
                 disableInteraction={isEditing}
                 onChange={handleAddressChange} // Pass both address and geolocation
               />
-            :
+              :
               <TextField
-              key={field}
-              label={field}
-              value={(currentEntry && currentEntry.info && currentEntry.info[field]) || ''} // Show currentEntry values
-              disabled={isEditing && (field === "Link" || field === "Address")}
-              onChange={(e) => handleNewEntryChange(field, e.target.value)}
-              fullWidth
-              margin="normal"
-            />
+                key={field}
+                label={field}
+                value={(currentEntry && currentEntry.info && currentEntry.info[field]) || ''} // Show currentEntry values
+                disabled={isEditing && (field === "Link" || field === "Address")}
+                onChange={(e) => handleNewEntryChange(field, e.target.value)}
+                fullWidth
+                margin="normal"
+              />
           ))}
 
           <Box marginTop={2}>

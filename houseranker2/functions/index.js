@@ -114,7 +114,7 @@ exports.calculateDistance = functions.https.onCall(async (data, context) => {
         'Both entryId and poiId are required.'
       );
     }
-
+    console.log("AAAAAAAAAAAAAAAAA")
     // Example: Simulated calculation of distances
     const response = {
       walking: Math.floor(Math.random() * 45),
@@ -166,8 +166,6 @@ exports.createPaymentIntent = functions.https.onRequest(async (req, res) => {
 });
 
 exports.handleStripeWebhook = functions.https.onRequest(async (req, res) => {
-  console.log("FieldValue:", admin.firestore.FieldValue);
-
   const sig = req.headers["stripe-signature"];
   const endpointSecret = "whsec_bd46jDBRQC0NKP5Au0cxJRQRaA54SK1A"; // Set this in your Stripe dashboard
   const tokens = {2050:{"pointsOfInterest":3, "entries":25}, 1550:{"pointsOfInterest":3, "entries":15}, 750:{"pointsOfInterest":0, "entries":10} };
@@ -190,7 +188,7 @@ exports.handleStripeWebhook = functions.https.onRequest(async (req, res) => {
       const userDocRef = admin.firestore().collection("users").doc(userId);
       const userDoc = userDocRef.get()
       const data = (await userDoc).data()
-      console.log(tokens[amount])
+
       const newEntries = (data.tokens.entries || 0) + tokens[amount]["entries"];
       const newPointsOfInterest = (data.tokens.pointsOfInterest || 0) + tokens[amount]["pointsOfInterest"];
       
