@@ -24,19 +24,21 @@ const recalculateMaxsAndStats = async (userId, field) => {
 
   const newMaxs = {};
   const newStats = {};
+  const maxConverter = { "Size": -1, "Typology": -1, "Price": 1 }; // Adjustable logic
 
   entriesSnap.forEach((doc) => {
-
     const entry = doc.data();
     if (entry[field] !== undefined) {
+      const convertedValue = entry[field] * maxConverter[field];
+
       // Update maximum
-      newMaxs[field] = Math.max(newMaxs[field] || 0, entry[field]);
+      if (newMaxs[field] === undefined || convertedValue > newMaxs[field] * maxConverter[field]) {
+        newMaxs[field] = entry[field];
+      }
 
       // Update minimum
-      if (newStats[field] === undefined) {
+      if (newStats[field] === undefined || convertedValue < newStats[field] * maxConverter[field]) {
         newStats[field] = entry[field];
-      } else {
-        newStats[field] = Math.min(newStats[field], entry[field]);
       }
     }
   });
@@ -44,8 +46,9 @@ const recalculateMaxsAndStats = async (userId, field) => {
   const userDocRef = db.collection("users_entries").doc(userId);
   await userDocRef.set({ maxs: newMaxs, stats: newStats }, { merge: true });
 
-  console.log(`Recalculated maxs (set) and stats for userId ${userId}:`, { newMaxs, newStats });
+  console.log(`Recalculated maxs and stats for userId ${userId}:`, { newMaxs, newStats });
 };
+
 
 exports.myfunction = onDocumentWritten("users_entries/{userId}/entries/{entryId}", async (event) => {
   const previousData = event.data.before ? event.data.before.data() : null;
@@ -69,36 +72,32 @@ exports.myfunction = onDocumentWritten("users_entries/{userId}/entries/{entryId}
   }
 
   for (const [field, value] of Object.entries(data)) {
-
-    if ((!previousData || value !== previousData[field]) && (field !== "Address" && field !== "Link" && field !== "Description") && data) {
-      if (!changed) {
-        changed = true;
-        userDocRef = db.collection("users_entries").doc(event.params.userId);
-        const userDoc = await userDocRef.get(); // Admin SDK uses `.get()` instead of `getDoc`
-
-        userData = userDoc.data();
-      }
-      console.log("Value has changed:", field, value);
-
-      if (value * maxConverter[field] > (userData.maxs[field] * maxConverter[field])) {
-        const newMaxs = {};
-        newMaxs[field] = value;
-        await userDocRef.set({ maxs: newMaxs }, { merge: true });
-        console.log("Updated maxs:", newMaxs);
-      }
-      else {
-
-        if (value * maxConverter[field] < userData.stats[field] * maxConverter[field]) {
-          const newBests = {};
-          newBests[field] = value;
-          await userDocRef.set({ stats: newBests }, { merge: true });
-          console.log("Updated maxs:", newBests);
+    if ((!previousData || value !== previousData[field]) && (field !== "Address" && field !== "Link" && field !== "Description")) {
+        if (!changed) {
+            changed = true;
+            userDocRef = db.collection("users_entries").doc(event.params.userId);
+            const userDoc = await userDocRef.get();
+            userData = userDoc.data() || {};
+            userData.maxs = userData.maxs || {};
+            userData.stats = userData.stats || {};
         }
-        else {
-          if (previousData && (previousData[field] === userData.stats[field] || previousData[field] === userData.maxs[field]))
+
+        console.log("Value has changed:", field, value);
+
+        const currentMax = userData.maxs[field] !== undefined ? userData.maxs[field] * maxConverter[field] : -Infinity;
+        const currentStat = userData.stats[field] !== undefined ? userData.stats[field] * maxConverter[field] : Infinity;
+
+        if (value * maxConverter[field] > currentMax) {
+            const newMaxs = { [field]: value };
+            await userDocRef.set({ maxs: newMaxs }, { merge: true });
+            console.log("Updated maxs:", newMaxs);
+        } else if (value * maxConverter[field] < currentStat) {
+            const newBests = { [field]: value };
+            await userDocRef.set({ stats: newBests }, { merge: true });
+            console.log("Updated stats:", newBests);
+        } else if (previousData && (previousData[field] === userData.stats[field] || previousData[field] === userData.maxs[field])) {
             recalculateMaxsAndStats(event.params.userId, field);
         }
-      }
     }
   }
 });
@@ -114,7 +113,6 @@ exports.calculateDistance = functions.https.onCall(async (data, context) => {
         'Both entryId and poiId are required.'
       );
     }
-    console.log("AAAAAAAAAAAAAAAAA")
     // Example: Simulated calculation of distances
     const response = {
       walking: Math.floor(Math.random() * 45),

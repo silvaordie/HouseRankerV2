@@ -181,35 +181,35 @@ const Dashboard = () => {
       };
     }
   }
-
-  const fetchData = useCallback(async () => {
+  const fetchData = async () => {
     if (currentUser) {
       try {
+        console.log("Fetching data")
         const userRef = doc(db, "users", currentUser.uid);
         const udoc = await getDoc(userRef);
         setUserData(udoc.data());
-  
+
         const userDocRef = doc(db, "users_entries", currentUser.uid);
         const userDoc = await getDoc(userDocRef);
         let data = userDoc.data();
         setSliderValues(data.sliderValues || { "Size": 0, "Typology": 0, "Price": 0, "Coziness": 0 });
         setUserMaxs(data.maxs || {});
         setUserStats(data.stats || {});
-  
+
         const entriesJson = {};
         const pointsOfInterestJson = {};
-  
+
         for (const typ of ["entries", "pointsOfInterest"]) {
           const collectionRef = collection(db, `users_${typ}/${currentUser.uid}/${typ}`);
           const querySnapshot = await getDocs(collectionRef);
           const mainCollectionRef = collection(db, typ);
-  
+
           for (const userDoc of querySnapshot.docs) {
             const docId = userDoc.id;
             const userDocData = userDoc.data();
             const mainDocRef = doc(mainCollectionRef, docId);
             const mainDocSnapshot = await getDoc(mainDocRef);
-  
+
             if (mainDocSnapshot.exists()) {
               const mainDocData = mainDocSnapshot.data();
               if (typ === "entries") {
@@ -226,24 +226,22 @@ const Dashboard = () => {
             }
           }
         }
-  
+
         setEntries(entriesJson || {});
         setPointsOfInterest(pointsOfInterestJson || {});
       } catch (error) {
         console.error("Error fetching user data:", error.message);
       } finally {
       }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser]);
-  
+    };
+  }
   useEffect(() => {
     fetchData();
-  }, [fetchData]);  
+  }, []);
 
   useEffect(() => {
     loadDistances();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entries, pointsOfInterest]);
 
   const saveUserData = async (updatedData) => {
@@ -260,6 +258,7 @@ const Dashboard = () => {
       console.error("No current user found");
     }
   };
+
   const delUserData = async (document, key) => {
     if (currentUser) {
       try {
@@ -273,6 +272,7 @@ const Dashboard = () => {
       console.error("No current user found");
     }
   };
+
   // Open modal for adding or editing
   const openModal = async (point = null) => {
     if (userData) {
@@ -285,22 +285,14 @@ const Dashboard = () => {
         setIsNewPointOpen(true);
       } else {
         if (userData && userData.tokens.pointsOfInterest > 0) {
-          const docRef = doc(db, "users", currentUser.uid);
-          const docSnapshot = await getDoc(docRef);
-
-          const data = docSnapshot.data();
-          if (data.tokens.pointsOfInterest > 0) {
-            setAddress('');
-            setPoiSliders({ "walking": 0, "car": 0, "transport": 0 });
-            setCurrentPoint(null);
-            setIsNewPointOpen(true);
-          }
-          else {
-            setOutOfTokens(true);
-          }
+          setAddress('');
+          setPoiSliders({ "walking": 0, "car": 0, "transport": 0 });
+          setCurrentPoint(null);
+          setIsNewPointOpen(true);
         }
-        else
+        else {
           setOutOfTokens(true);
+        }
       }
     }
   };
@@ -311,6 +303,11 @@ const Dashboard = () => {
     const data = userDoc.data();
 
     const newTokens = data.tokens[collectionPath] - 1;
+  
+    setUserData((prevUserData) => ({
+      ...prevUserData,
+      tokens: {...prevUserData.tokens, [collectionPath]:newTokens}, // New tokens object
+    }));
 
     await setDoc(userDocRef, {
       tokens: {
@@ -547,7 +544,6 @@ const Dashboard = () => {
       return 0; // Values are equal
     });
   }, [entries, sortConfig]);
-  console.log(sortedEntries)
 
   const tableRows = React.useMemo(() => {
     if (!currentUser) return null;
@@ -612,17 +608,7 @@ const Dashboard = () => {
 
   const openAddEntryModal = async () => {
     if (userData && userData.tokens.entries > 0) {
-      const docRef = doc(db, "users", currentUser.uid);
-      const docSnapshot = await getDoc(docRef);
-
-      const data = docSnapshot.data();
-      if (data.tokens.entries > 0) {
-        setAddress('');
-        setPoiSliders({ "walking": 0, "car": 0, "transport": 0 });
-        setCurrentPoint(null);
-        setIsNewHouseOpen(true);
-      }
-
+      setAddress('');
       setCurrentEntry({ "info": { Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Coziness: '' } });
       setIsEditing(false);
       setIsNewHouseOpen(true);
@@ -676,7 +662,6 @@ const Dashboard = () => {
         [address]: { "info": updatedEntry.info, "score": prevEntries[address], "geolocation": geolocation },
       }));
 
-      console.log(updatedEntry)
       add_update_place("entries", updatedEntry.info.Address, updatedEntry.info)
     }
     setIsNewHouseOpen(false); // Close the modal
@@ -684,10 +669,9 @@ const Dashboard = () => {
 
   const colors = ["#db284e", "#db284e", "#db8829", "#c9db29", "#4caf50", "#007bff"]
   const icons = { "walking": "person-walking", "transport": "train", "car": "car" }
-
   return (
     <div className="dashboard-container">
-      <ToolbarLayout user={currentUser.uid} db={db} />
+      <ToolbarLayout userData={userData} db={db} />
       {/* Header Section */}
       <div className="top-container">
 
@@ -695,12 +679,6 @@ const Dashboard = () => {
         <div className="slider-container">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <Typography variant="h6">Importance</Typography>
-            <Typography
-              variant="body2"
-              style={{ fontWeight: 'bold', fontSize: '0.875rem', color: '#555', marginRight: '5%' }}
-            >
-              Max
-            </Typography>
           </div>
 
           {[...["Price", "Size", "Typology", "Coziness"]].map((name, i) => (
@@ -714,18 +692,6 @@ const Dashboard = () => {
                 max={5}
                 step={1}
                 marks
-              />
-              <input
-                type="number"
-                style={{
-                  width: '60px',
-                  marginLeft: '16px',
-                  transform: 'scale(0.8, 0.8)', // Reduces height by 60%
-                  transformOrigin: 'center', // Keeps the input centered
-                  padding: '4px 2px', // Adjusts padding for better alignment
-                }}
-                value={sliderValues[name] !== undefined ? sliderValues[name] : 0}
-                onChange={(e) => handleSliderChange(name, parseInt(e.target.value) || 0)}
               />
             </div>
           ))}
