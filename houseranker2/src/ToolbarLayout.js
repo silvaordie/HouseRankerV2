@@ -51,7 +51,6 @@ const ToolbarLayout = ({ userData, db }) => {
       year: 'numeric',
       month: 'long',
       day: '2-digit',
-      hour12: true,
     });
   return (
     <Box sx={{ flexGrow: 1 }}>

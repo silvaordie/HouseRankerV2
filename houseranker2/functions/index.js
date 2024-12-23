@@ -13,6 +13,8 @@ const functions = require("firebase-functions")
 const cors = require("cors");
 require("dotenv").config();
 const stripe = require("stripe")(String(process.env.STRIPE_SECRET_KEY));
+const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY
+const axios = require('axios');
 
 // Initialize the Firebase Admin SDK
 admin.initializeApp();
@@ -73,100 +75,191 @@ exports.myfunction = onDocumentWritten("users_entries/{userId}/entries/{entryId}
 
   for (const [field, value] of Object.entries(data)) {
     if ((!previousData || value !== previousData[field]) && (field !== "Address" && field !== "Link" && field !== "Description")) {
-        if (!changed) {
-            changed = true;
-            userDocRef = db.collection("users_entries").doc(event.params.userId);
-            const userDoc = await userDocRef.get();
-            userData = userDoc.data() || {};
-            userData.maxs = userData.maxs || {};
-            userData.stats = userData.stats || {};
-        }
+      if (!changed) {
+        changed = true;
+        userDocRef = db.collection("users_entries").doc(event.params.userId);
+        const userDoc = await userDocRef.get();
+        userData = userDoc.data() || {};
+        userData.maxs = userData.maxs || {};
+        userData.stats = userData.stats || {};
+      }
 
-        console.log("Value has changed:", field, value);
+      console.log("Value has changed:", field, value);
 
-        const currentMax = userData.maxs[field] !== undefined ? userData.maxs[field] * maxConverter[field] : -Infinity;
-        const currentStat = userData.stats[field] !== undefined ? userData.stats[field] * maxConverter[field] : Infinity;
+      const currentMax = userData.maxs[field] !== undefined ? userData.maxs[field] * maxConverter[field] : -Infinity;
+      const currentStat = userData.stats[field] !== undefined ? userData.stats[field] * maxConverter[field] : Infinity;
 
-        if (value * maxConverter[field] > currentMax) {
-            const newMaxs = { [field]: value };
-            await userDocRef.set({ maxs: newMaxs }, { merge: true });
-            console.log("Updated maxs:", newMaxs);
-        } else if (value * maxConverter[field] < currentStat) {
-            const newBests = { [field]: value };
-            await userDocRef.set({ stats: newBests }, { merge: true });
-            console.log("Updated stats:", newBests);
-        } else if (previousData && (previousData[field] === userData.stats[field] || previousData[field] === userData.maxs[field])) {
-            recalculateMaxsAndStats(event.params.userId, field);
-        }
+      if (value * maxConverter[field] > currentMax) {
+        const newMaxs = { [field]: value };
+        await userDocRef.set({ maxs: newMaxs }, { merge: true });
+        console.log("Updated maxs:", newMaxs);
+      } else if (value * maxConverter[field] < currentStat) {
+        const newBests = { [field]: value };
+        await userDocRef.set({ stats: newBests }, { merge: true });
+        console.log("Updated stats:", newBests);
+      } else if (previousData && (previousData[field] === userData.stats[field] || previousData[field] === userData.maxs[field])) {
+        recalculateMaxsAndStats(event.params.userId, field);
+      }
     }
   }
 });
+
+dummy_values = async (entryId, poiId) =>  {
+  // Check if "distances" document exists for the entryId
+  const distancesDocRef = db.collection('distances').doc(entryId);
+  const distancesDoc = await distancesDocRef.get();
+
+  if (distancesDoc.exists) {
+    const distancesData = distancesDoc.data();
+    if (distancesData[poiId]) {
+      // If distances already exist, return them
+      return distancesData[poiId];
+    }
+  }
+  const response = {
+    walking: Math.floor(Math.random() * 45),
+    car: Math.floor(Math.random() * 45),
+    transport: Math.floor(Math.random() * 45)
+  };
+  await distancesDocRef.set({
+    [poiId]: response
+  }, { merge: true });
+
+  // Return response
+  return response;
+}
 
 exports.calculateDistance = functions.https.onCall(async (data, context) => {
-  try {
+  const { entryId, poiId } = data.data;
+  if (1)
+    return dummy_values(entryId, poiId)
+  else {
+    try {
+ // Get data passed from the front-end
 
-    const { entryId, poiId } = data.data; // Get data passed from the front-end
-    // Validate inputs
-    if (!entryId || !poiId) {
-      throw new functions.https.HttpsError(
-        'invalid-argument',
-        'Both entryId and poiId are required.'
-      );
+      // Validate inputs
+      if (!entryId || !poiId) {
+        throw new functions.https.HttpsError(
+          'invalid-argument',
+          'Both entryId and poiId are required.'
+        );
+      }
+
+      // Check if "distances" document exists for the entryId
+      const distancesDocRef = db.collection('distances').doc(entryId);
+      const distancesDoc = await distancesDocRef.get();
+
+      if (distancesDoc.exists) {
+        const distancesData = distancesDoc.data();
+        if (distancesData[poiId]) {
+          // If distances already exist, return them
+          return distancesData[poiId];
+        }
+      }
+
+      // Retrieve geolocation data for both entry and POI
+      const entryDoc = await db.collection('entries').doc(entryId).get();
+      if (!entryDoc.exists) {
+        throw new functions.https.HttpsError('not-found', 'Entry not found.');
+      }
+
+      const poiDoc = await db.collection('pointsOfInterest').doc(poiId).get();
+      if (!poiDoc.exists) {
+        throw new functions.https.HttpsError('not-found', 'Point of Interest not found.');
+      }
+
+      const entryData = entryDoc.data();
+      const poiData = poiDoc.data();
+      const entryGeoloc = entryData.geoloc; // Expecting { lat, lng }
+      const poiGeoloc = poiData.geoloc;    // Expecting { lat, lng }
+
+      if (!entryGeoloc || !poiGeoloc) {
+        throw new functions.https.HttpsError('invalid-argument', 'Geolocation data is missing for entry or POI.');
+      }
+
+      // Use Google Maps Distance Matrix API to calculate distances for driving, walking, and transit
+      const modes = ['driving', 'walking', 'transit'];
+      const departureTime = Math.floor(new Date().setHours(9, 0, 0, 0) / 1000); // 9:00 AM timestamp
+
+      const distances = {};
+
+      for (const mode of modes) {
+        const url = `https://maps.googleapis.com/maps/api/distancematrix/json`;
+
+        const response = await axios.get(url, {
+          params: {
+            origins: `${entryGeoloc.lat},${entryGeoloc.lng}`,
+            destinations: `${poiGeoloc.lat},${poiGeoloc.lng}`,
+            key: GOOGLE_MAPS_API_KEY,
+            mode: mode,
+            departure_time: departureTime
+          }
+        });
+
+        const result = response.data;
+
+        if (result.status !== 'OK' || result.rows[0].elements[0].status !== 'OK') {
+          throw new functions.https.HttpsError('internal', `Error fetching ${mode} data from Google Maps API.`);
+        }
+
+        distances[mode] = result.rows[0].elements[0].duration.value; // Duration in seconds
+      }
+
+      // Store distances back to Firestore under the "distances" collection
+      await distancesDocRef.set({
+        [poiId]: distances
+      }, { merge: true });
+
+      // Return calculated distances
+      return distances;
+
+    } catch (error) {
+      console.error(error);
+      throw new functions.https.HttpsError('internal', 'An error occurred while calculating distances.');
     }
-    // Example: Simulated calculation of distances
-    const response = {
-      walking: Math.floor(Math.random() * 45),
-      car: Math.floor(Math.random() * 45),
-      transport: Math.floor(Math.random() * 45)
-    };
-
-    // Return response
-    return response;
-  } catch (error) {
-    console.error(error.message);
-    throw new functions.https.HttpsError('internal', 'An error occurred while calculating distances.');
   }
 });
 
+
 exports.createPaymentIntent = functions.https.onRequest(async (req, res) => {
-    try {
-      if (req.method !== "POST") {
-        return res.status(405).send({ error: "Only POST requests are allowed." });
-      }
-
-      const { amount, uid } = req.body;
-
-      if (!amount || typeof amount !== "number") {
-        return res.status(400).send({ error: "Invalid or missing amount." });
-      }
-
-      // Set a timeout to prevent the request from hanging too long
-      const timeout = 10000; // Timeout in milliseconds (10 seconds)
-      const stripeCall = stripe.paymentIntents.create({
-        amount: amount,
-        currency: "chf",
-        automatic_payment_methods: { enabled: true },
-        metadata: {
-          userId: uid, // Replace with actual user ID
-        },
-      });
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Request Timeout')), timeout)
-      );
-
-      const paymentIntent = await Promise.race([stripeCall, timeoutPromise]);
-
-      res.status(200).send({ clientSecret: paymentIntent.client_secret });
-    } catch (error) {
-      console.error("Error creating Payment Intent:", error.message);
-      res.status(500).send({ error: `Internal Server Error: ${error.message}` });
+  try {
+    if (req.method !== "POST") {
+      return res.status(405).send({ error: "Only POST requests are allowed." });
     }
+
+    const { amount, uid } = req.body;
+
+    if (!amount || typeof amount !== "number") {
+      return res.status(400).send({ error: "Invalid or missing amount." });
+    }
+
+    // Set a timeout to prevent the request from hanging too long
+    const timeout = 10000; // Timeout in milliseconds (10 seconds)
+    const stripeCall = stripe.paymentIntents.create({
+      amount: amount,
+      currency: "chf",
+      automatic_payment_methods: { enabled: true },
+      metadata: {
+        userId: uid, // Replace with actual user ID
+      },
+    });
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Request Timeout')), timeout)
+    );
+
+    const paymentIntent = await Promise.race([stripeCall, timeoutPromise]);
+
+    res.status(200).send({ clientSecret: paymentIntent.client_secret });
+  } catch (error) {
+    console.error("Error creating Payment Intent:", error.message);
+    res.status(500).send({ error: `Internal Server Error: ${error.message}` });
+  }
 });
 
 exports.handleStripeWebhook = functions.https.onRequest(async (req, res) => {
   const sig = req.headers["stripe-signature"];
   const endpointSecret = "whsec_bd46jDBRQC0NKP5Au0cxJRQRaA54SK1A"; // Set this in your Stripe dashboard
-  const tokens = {2050:{"pointsOfInterest":3, "entries":25}, 1550:{"pointsOfInterest":3, "entries":15}, 750:{"pointsOfInterest":0, "entries":10} };
+  const tokens = { 2050: { "pointsOfInterest": 3, "entries": 25 }, 1550: { "pointsOfInterest": 3, "entries": 15 }, 750: { "pointsOfInterest": 0, "entries": 10 } };
   let event;
   try {
     event = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
@@ -189,12 +282,13 @@ exports.handleStripeWebhook = functions.https.onRequest(async (req, res) => {
 
       const newEntries = (data.tokens.entries || 0) + tokens[amount]["entries"];
       const newPointsOfInterest = (data.tokens.pointsOfInterest || 0) + tokens[amount]["pointsOfInterest"];
-      
+
       await userDocRef.set({
         tokens: {
           entries: newEntries,
           pointsOfInterest: newPointsOfInterest
-        }},{merge:true}
+        }
+      }, { merge: true }
       );
     } catch (error) {
       console.error("Firestore update error:", error.message);

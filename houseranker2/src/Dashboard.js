@@ -44,17 +44,17 @@ const Dashboard = () => {
 
   //const navigate = useNavigate();
   const { currentUser } = useAuth(); // Access currentUser directly from context
-  const [userStats, setUserStats] = useStateWithCache("userStats", {});
-  const [userMaxs, setUserMaxs] = useStateWithCache("userMaxs", {});
-  const [sliderValues, setSliderValues] = useStateWithCache("sliderValues", { "Size": 0, "Typology": 0, "Price": 0, "Coziness": 0 }); // Initial sliders
-  const [entries, setEntries] = useStateWithCache("entries", {});
+  const [userStats, setUserStats] = useState("userStats", {});
+  const [userMaxs, setUserMaxs] = useState("userMaxs", {});
+  const [sliderValues, setSliderValues] = useState("sliderValues", { "Size": 0, "Typology": 0, "Price": 0, "Coziness": 0 }); // Initial sliders
+  const [entries, setEntries] = useState({});
   const [isNewHouseOpen, setIsNewHouseOpen] = useState(false); // Modal state for adding new entry
 
-  const [pointsOfInterest, setPointsOfInterest] = useStateWithCache("pointsOfInterest", {});
+  const [pointsOfInterest, setPointsOfInterest] = useState({});
   const [isNewPointOpen, setIsNewPointOpen] = useState(false);
   const [currentPoint, setCurrentPoint] = useState(null); // To track if editing an existing point
 
-  const [userData, setUserData] = useStateWithCache("userData", {});
+  const [userData, setUserData] = useState({});
   const [address, setAddress] = useState('');
   const [name, setName] = useState('');
   const [geolocation, setGeolocation] = useState({ lat: null, lon: null });
@@ -62,9 +62,10 @@ const Dashboard = () => {
   const [maxs, setMaxs] = useState({});
   const [currentEntry, setCurrentEntry] = useState(null); // For both adding and editing
   const [isEditing, setIsEditing] = useState(false);
-  const [distances, setDistances] = useStateWithCache("distances", {});
+  const [distances, setDistances] = useState({});
   const [outOfTokens, setOutOfTokens] = useState(false);
   const [sortConfig, setSortConfig] = React.useState({ key: "Score", direction: 'dsc' });
+  const [isDataLoaded, setIsDataLoaded] = useState(false);  // New state to track the first load
 
   /*const updateUserData = async () => {
     if (currentUser && (!sliderValues || !userMaxs || !userStats)) { // Ensure currentUser is defined
@@ -153,18 +154,20 @@ const Dashboard = () => {
       processedPairs.current.add(`${entryId}-${poiId}`);
     }
   };
-
-  const [distancesLoaded, setDistancesLoaded] = useState(false);
   const loadDistances = async () => {
-    if (!distancesLoaded && entries && pointsOfInterest) {
+    if (entries && pointsOfInterest) {
       for (const [entryId, entry] of Object.entries(entries)) {
 
         const docRef = doc(db, "distances", entryId);
+
         const docSnapshot = await getDoc(docRef);
+        if (!docSnapshot.exists())
+          await setDoc(docRef, {}, { merge: true });
 
         const docData = docSnapshot.data();
         Object.entries(pointsOfInterest).forEach(([poiId, poi]) => {
-          if (docData && docData[poiId]) {
+          if (docData[poiId]) {
+            console.log("A")
             setDistances(prevDistances => ({
               ...prevDistances,
               [entryId]: {
@@ -177,7 +180,6 @@ const Dashboard = () => {
             getDistanceBetween(entryId, poiId)
           }
         });
-        setDistancesLoaded(true);
       };
     }
   }
@@ -226,23 +228,25 @@ const Dashboard = () => {
             }
           }
         }
-
         setEntries(entriesJson || {});
         setPointsOfInterest(pointsOfInterestJson || {});
       } catch (error) {
         console.error("Error fetching user data:", error.message);
       } finally {
+        loadDistances()
       }
     };
   }
   useEffect(() => {
     fetchData();
   }, []);
-
   useEffect(() => {
-    loadDistances();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entries, pointsOfInterest]);
+    // Trigger loadDistances() only after entries and pointsOfInterest have been set for the first time
+    if (!isDataLoaded && Object.keys(entries).length > 0 && Object.keys(pointsOfInterest).length > 0) {
+      loadDistances();
+      setIsDataLoaded(true);  // Set the flag to true so it doesn't run again
+    }
+  }, [entries, pointsOfInterest, isDataLoaded]);
 
   const saveUserData = async (updatedData) => {
     if (currentUser) {
@@ -258,7 +262,6 @@ const Dashboard = () => {
       console.error("No current user found");
     }
   };
-
   const delUserData = async (document, key) => {
     if (currentUser) {
       try {
@@ -303,10 +306,10 @@ const Dashboard = () => {
     const data = userDoc.data();
 
     const newTokens = data.tokens[collectionPath] - 1;
-  
+
     setUserData((prevUserData) => ({
       ...prevUserData,
-      tokens: {...prevUserData.tokens, [collectionPath]:newTokens}, // New tokens object
+      tokens: { ...prevUserData.tokens, [collectionPath]: newTokens }, // New tokens object
     }));
 
     await setDoc(userDocRef, {
