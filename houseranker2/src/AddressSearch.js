@@ -3,7 +3,7 @@ import { TextField, InputAdornment, List, ListItem, ListItemButton, ListItemText
 import SearchIcon from "@mui/icons-material/Search";
 import axios from "axios";
 
-const AddressSearch = ({ key, label, value, disabled, onChange, disableInteraction }) => {
+const AddressSearch = ({ label, value, disabled, onChange, disableInteraction }) => {
   const [query, setQuery] = useState(value || ""); // Initialize with the provided value
   const [suggestions, setSuggestions] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -81,7 +81,6 @@ const AddressSearch = ({ key, label, value, disabled, onChange, disableInteracti
   return (
     <div style={{ position: "relative", width: "100%" }}>
       <TextField
-        key={key}
         label={label}
         value={query}
         onChange={handleChange}

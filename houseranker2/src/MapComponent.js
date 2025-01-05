@@ -5,12 +5,12 @@ import "leaflet/dist/leaflet.css";
 import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
 import "leaflet.awesome-markers";
 
-const CenterAndZoomUpdater = ({ pointsOfInterest, sortedEntries, triggerUpdate, resetTrigger }) => {
+const CenterAndZoomUpdater = ({ pointsOfInterest, sortedEntries }) => {
   const map = useMap();
   const prevDataRef = useRef({ pointsOfInterest: null, sortedEntries: null });
 
   useEffect(() => {
-    if (!map || !triggerUpdate) return;
+    if (!map) return;
 
     const hasDataChanged = () => {
       const prevPoints = prevDataRef.current.pointsOfInterest;
@@ -23,8 +23,7 @@ const CenterAndZoomUpdater = ({ pointsOfInterest, sortedEntries, triggerUpdate, 
     };
 
     if (!hasDataChanged()) {
-      resetTrigger(); // If data hasn't changed, reset the trigger and skip
-      return;
+      return; // Skip if data hasn't changed
     }
 
     const bounds = L.latLngBounds();
@@ -44,24 +43,12 @@ const CenterAndZoomUpdater = ({ pointsOfInterest, sortedEntries, triggerUpdate, 
     }
 
     prevDataRef.current = { pointsOfInterest, sortedEntries };
-    resetTrigger(); // Reset trigger after applying zoom and center
-  }, [map, pointsOfInterest, sortedEntries, triggerUpdate, resetTrigger]);
+  }, [map, pointsOfInterest, sortedEntries]);
 
   return null;
 };
 
 const MapComponent = ({ pointsOfInterest, sortedEntries }) => {
-  const [triggerCenterUpdate, setTriggerCenterUpdate] = useState(false);
-
-  // Trigger center/zoom update when pointsOfInterest or sortedEntries change
-  useEffect(() => {
-    setTriggerCenterUpdate(true);
-  }, [pointsOfInterest, sortedEntries]);
-
-  const resetCenterTrigger = () => {
-    setTriggerCenterUpdate(false);
-  };
-
   const getCustomIcon = (color) => {
     return L.AwesomeMarkers.icon({
       icon: "fa-home",
@@ -84,8 +71,6 @@ const MapComponent = ({ pointsOfInterest, sortedEntries }) => {
         <CenterAndZoomUpdater
           pointsOfInterest={pointsOfInterest}
           sortedEntries={sortedEntries}
-          triggerUpdate={triggerCenterUpdate}
-          resetTrigger={resetCenterTrigger}
         />
 
         {/* Render POIs */}
@@ -108,17 +93,19 @@ const MapComponent = ({ pointsOfInterest, sortedEntries }) => {
         {sortedEntries.slice(0, 4).map(([_, entry], index) => {
           const colors = ["blue", "green", "yellow", "red"];
           const iconColor = colors[index];
-
-          return (
-            <Marker
-              key={`custom-${index}`}
-              position={[
-                parseFloat(entry.geolocation.lat),
-                parseFloat(entry.geolocation.lon),
-              ]}
-              icon={getCustomIcon(iconColor)}
-            />
-          );
+          if (entry.geolocation)
+          {
+            return (
+              <Marker
+                key={`custom-${index}`}
+                position={[
+                  parseFloat(entry.geolocation.lat),
+                  parseFloat(entry.geolocation.lon),
+                ]}
+                icon={getCustomIcon(iconColor)}
+              />
+            );
+          }
         })}
       </MapContainer>
     </div>

@@ -48,6 +48,7 @@ const Dashboard = () => {
   const [userMaxs, setUserMaxs] = useState("userMaxs", {});
   const [sliderValues, setSliderValues] = useState("sliderValues", { "Size": 0, "Typology": 0, "Price": 0, "Coziness": 0 }); // Initial sliders
   const [entries, setEntries] = useState({});
+  const [scores, setScores] = useState({});
   const [isNewHouseOpen, setIsNewHouseOpen] = useState(false); // Modal state for adding new entry
 
   const [pointsOfInterest, setPointsOfInterest] = useState({});
@@ -84,10 +85,11 @@ const Dashboard = () => {
   };*/
 
   useEffect(() => {
+    console.log(sliderValues)
     if (!entries || Object.keys(entries).length === 0) return;
     const calculateScores = () => {
-      const updatedEntries = { ...entries };
-      Object.entries(updatedEntries).forEach(([entryId, entry]) => {
+      const updatedScores = { ...scores };
+      Object.entries(entries).forEach(([entryId, entry]) => {
         let score = 0;
         // Base score calculation logic
         for (const [field, value] of Object.entries({
@@ -115,10 +117,10 @@ const Dashboard = () => {
           }
         });
 
-        entry.Score = score;
+        updatedScores[entryId] = score;
       });
 
-      setEntries(updatedEntries); // Update state with calculated scores
+      setScores(updatedScores); // Update state with calculated scores
     };
     calculateScores();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -166,7 +168,6 @@ const Dashboard = () => {
         const docData = docSnapshot.data();
         Object.entries(pointsOfInterest).forEach(([poiId, poi]) => {
           if (docData[poiId]) {
-            console.log("A")
             setDistances(prevDistances => ({
               ...prevDistances,
               [entryId]: {
@@ -527,8 +528,8 @@ const Dashboard = () => {
 
       // Handle "Score" key separately since it's stored directly in the entry
       if (sortConfig.key === 'Score') {
-        aValue = aEntry.Score || 0;
-        bValue = bEntry.Score || 0;
+        aValue = scores[aEntry.Adress] || 0;
+        bValue = scores[bEntry.Adress] || 0;
       } else {
         // Default to the `info` object for other keys
         aValue = aEntry.info[sortConfig.key];
@@ -545,7 +546,7 @@ const Dashboard = () => {
 
       return 0; // Values are equal
     });
-  }, [entries, sortConfig]);
+  }, [entries, sortConfig, scores]);
 
   const tableRows = React.useMemo(() => {
     if (!currentUser) return null;
@@ -581,7 +582,7 @@ const Dashboard = () => {
         >
           {baseDataCells}
           {interestPointDataCells}
-          <td>{Number(entry.Score ?? 0).toFixed(0)}</td>
+          <td>{Number(scores[entryId] ?? 0).toFixed(0)}</td>
         </tr>
       );
     });
@@ -600,12 +601,16 @@ const Dashboard = () => {
   };
 
   const handleDeleteEntry = () => {
-    //if (!currentEntry) return; // Exit the function if currentEntry is null or undefined
-    delete entries[currentEntry.info.Address];
-    setEntries(entries); // Update the entries array
-    setCurrentEntry(null); // Reset current entry after deletion
+    if (!currentEntry) return; // Exit the function if currentEntry is null or undefined
+  
+    const updatedEntries = { ...entries }; // Create a shallow copy of entries
+    delete updatedEntries[currentEntry.info.Address]; // Remove the entry using the address
+  
+    setEntries(updatedEntries); // Update the entries state with the new object
+    setCurrentEntry(null); // Reset the current entry after deletion
     setIsNewHouseOpen(false); // Close the modal after deletion
-    delUserData("entries", currentEntry.info.Address)
+  
+    delUserData("entries", currentEntry.info.Address); // Remove the user data from the database or backend
   };
 
   const openAddEntryModal = async () => {
