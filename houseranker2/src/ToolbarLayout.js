@@ -47,11 +47,11 @@ const ToolbarLayout = ({ userData, db }) => {
       fetchData();
     }, [fetchData]); // Dependency to call fetchData when its memoized value changes
    */
-    const formattedDate = new Date(userData.createdAt).toLocaleString('en-UK', {
+    const formattedDate = userData ? new Date(userData.createdAt).toLocaleString('en-UK', {
       year: 'numeric',
       month: 'long',
       day: '2-digit',
-    });
+    }) : new Date(0);
   return (
     <Box sx={{ flexGrow: 1 }}>
       {/* Top Toolbar */}

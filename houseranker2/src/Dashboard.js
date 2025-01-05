@@ -89,7 +89,6 @@ const Dashboard = () => {
       const updatedEntries = { ...entries };
       Object.entries(updatedEntries).forEach(([entryId, entry]) => {
         let score = 0;
-
         // Base score calculation logic
         for (const [field, value] of Object.entries({
           "Price": entry.info.Price,
@@ -624,6 +623,7 @@ const Dashboard = () => {
   // Open modal for editing an entry, ensuring `currentEntry` is defined
   const openEditEntryModal = (entry) => {
     setCurrentEntry(entry || { "info": { Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Coziness: '' } });
+    setAddress(entry.info.Address)
     setIsEditing(true);
     setIsNewHouseOpen(true);
   };
@@ -660,10 +660,13 @@ const Dashboard = () => {
       if (address)
         updatedEntry.info.Address = address;
 
-      setEntries((prevEntries) => ({
-        ...prevEntries,
-        [address]: { "info": updatedEntry.info, "score": prevEntries[address], "geolocation": geolocation },
-      }));
+        setEntries((prevEntries) => ({
+          ...prevEntries,
+          [address]: { 
+            ...prevEntries[address], // Spread existing properties of the current entry
+            info: updatedEntry.info, // Update the `info` section
+          },
+        }));
 
       add_update_place("entries", updatedEntry.info.Address, updatedEntry.info)
     }

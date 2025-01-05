@@ -1,139 +1,128 @@
-import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import L from 'leaflet';
-import { useMap } from 'react-leaflet';
+import React, { useEffect, useState, useRef } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
+import "leaflet.awesome-markers";
 
-const CenterUpdater = ({ center, triggerUpdate, resetTrigger }) => {
-    const map = useMap();
+const CenterAndZoomUpdater = ({ pointsOfInterest, sortedEntries, triggerUpdate, resetTrigger }) => {
+  const map = useMap();
+  const prevDataRef = useRef({ pointsOfInterest: null, sortedEntries: null });
 
-    useEffect(() => {
-        if (triggerUpdate) {
-            map.setView(center); // Center the map
-            resetTrigger(); // Reset trigger after centering
-        }
-    }, [center, triggerUpdate, map, resetTrigger]);
+  useEffect(() => {
+    if (!map || !triggerUpdate) return;
 
-    return null;
+    const hasDataChanged = () => {
+      const prevPoints = prevDataRef.current.pointsOfInterest;
+      const prevSorted = prevDataRef.current.sortedEntries;
+
+      return (
+        JSON.stringify(prevPoints) !== JSON.stringify(pointsOfInterest) ||
+        JSON.stringify(prevSorted) !== JSON.stringify(sortedEntries)
+      );
+    };
+
+    if (!hasDataChanged()) {
+      resetTrigger(); // If data hasn't changed, reset the trigger and skip
+      return;
+    }
+
+    const bounds = L.latLngBounds();
+
+    // Add points of interest to bounds
+    Object.values(pointsOfInterest).forEach((poi) => {
+      bounds.extend([poi.geolocation.lat, poi.geolocation.lon]);
+    });
+
+    // Add sorted entries to bounds
+    sortedEntries.forEach(([_, entry]) => {
+      bounds.extend([entry.geolocation.lat, entry.geolocation.lon]);
+    });
+
+    if (bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+    }
+
+    prevDataRef.current = { pointsOfInterest, sortedEntries };
+    resetTrigger(); // Reset trigger after applying zoom and center
+  }, [map, pointsOfInterest, sortedEntries, triggerUpdate, resetTrigger]);
+
+  return null;
 };
 
 const MapComponent = ({ pointsOfInterest, sortedEntries }) => {
-    const [meanGeolocation, setMeanGeolocation] = useState({ lat: 0, lon: 0 });
-    const [triggerCenterUpdate, setTriggerCenterUpdate] = useState(false);
+  const [triggerCenterUpdate, setTriggerCenterUpdate] = useState(false);
 
-    // Calculate mean geolocation whenever pointsOfInterest changes
-    useEffect(() => {
-        const calculateMeanGeolocation = () => {
-            const totalPoints = Object.values(pointsOfInterest).length;
-            if (totalPoints === 0) return { lat: 0, lon: 0 };
+  // Trigger center/zoom update when pointsOfInterest or sortedEntries change
+  useEffect(() => {
+    setTriggerCenterUpdate(true);
+  }, [pointsOfInterest, sortedEntries]);
 
-            const { totalLat, totalLon } = Object.values(pointsOfInterest).reduce(
-                (acc, poi) => {
-                    acc.totalLat += parseFloat(poi.geolocation.lat);
-                    acc.totalLon += parseFloat(poi.geolocation.lon);
-                    return acc;
-                },
-                { totalLat: 0, totalLon: 0 }
-            );
+  const resetCenterTrigger = () => {
+    setTriggerCenterUpdate(false);
+  };
 
-            return {
-                lat: totalLat / totalPoints,
-                lon: totalLon / totalPoints,
-            };
-        };
+  const getCustomIcon = (color) => {
+    return L.AwesomeMarkers.icon({
+      icon: "fa-home",
+      markerColor: color,
+      prefix: "fa",
+      iconColor: "white",
+    });
+  };
 
-        const newMean = calculateMeanGeolocation();
+  return (
+    <div className="map-container" style={{ height: "100%", width: "100%" }}>
+      <MapContainer
+        center={[0, 0]} // Initial center (adjust if needed)
+        zoom={13} // Initial zoom
+        style={{ height: "100%", width: "100%" }}
+      >
+        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
-        if (
-            newMean.lat !== meanGeolocation.lat ||
-            newMean.lon !== meanGeolocation.lon
-        ) {
-            setMeanGeolocation(newMean);
-            setTriggerCenterUpdate(true);
-        }
-    }, [pointsOfInterest, meanGeolocation]);
+        {/* Add CenterAndZoomUpdater */}
+        <CenterAndZoomUpdater
+          pointsOfInterest={pointsOfInterest}
+          sortedEntries={sortedEntries}
+          triggerUpdate={triggerCenterUpdate}
+          resetTrigger={resetCenterTrigger}
+        />
 
-    const resetCenterTrigger = () => {
-        setTriggerCenterUpdate(false);
-    };
+        {/* Render POIs */}
+        {Object.values(pointsOfInterest).map((poi, index) => (
+          <Marker
+            key={`poi-${index}`}
+            position={[poi.geolocation.lat, poi.geolocation.lon]}
+            icon={L.AwesomeMarkers.icon({
+              icon: "fa-star",
+              markerColor: "purple",
+              prefix: "fa",
+              iconColor: "white",
+            })}
+          >
+            <Popup>{poi.name}</Popup>
+          </Marker>
+        ))}
 
-    const getCustomIcon = (color, number) => {
-        return new L.Icon({
-            iconUrl:
-                "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-            iconSize: [25, 41],
-            iconAnchor: [12, 41],
-            popupAnchor: [1, -34],
-            shadowSize: [41, 41],
-        });
-    };
+        {/* Render the top 4 custom-ranked markers */}
+        {sortedEntries.slice(0, 4).map(([_, entry], index) => {
+          const colors = ["blue", "green", "yellow", "red"];
+          const iconColor = colors[index];
 
-    return (
-        <div className="map-container" style={{ height: "100%", width: "100%" }}>
-            <MapContainer
-                center={[meanGeolocation.lat, meanGeolocation.lon]}
-                zoom={13}
-                style={{ height: "100%", width: "100%" }}
-            >
-                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-
-                {/* CenterUpdater to manage map centering */}
-                <CenterUpdater
-                    center={[meanGeolocation.lat, meanGeolocation.lon]}
-                    triggerUpdate={triggerCenterUpdate}
-                    resetTrigger={resetCenterTrigger}
-                />
-
-                {/* Render POIs */}
-                {Object.values(pointsOfInterest).map((poi, index) => (
-                    <Marker
-                        key={`poi-${index}`}
-                        position={[poi.geolocation.lat, poi.geolocation.lon]}
-                        icon={
-                            new L.Icon({
-                                iconUrl:
-                                    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-                                iconSize: [25, 41],
-                                iconAnchor: [12, 41],
-                                popupAnchor: [1, -34],
-                                shadowSize: [41, 41],
-                            })
-                        }
-                    >
-                        <Popup>{poi.name}</Popup>
-                    </Marker>
-                ))}
-
-                {/* Render the top 4 custom-ranked markers */}
-                {sortedEntries.slice(0, 4).map(([address, entry], index) => {
-                    const colors = ["blue", "green", "yellow", "red"];
-                    const iconColor = colors[index];
-
-                    return (
-                        <MemoizedMarker
-                            key={`custom-${index}`}
-                            position={[
-                                parseFloat(entry.geolocation.lat),
-                                parseFloat(entry.geolocation.lon),
-                            ]}
-                            icon={getCustomIcon(iconColor, index + 1)}
-                        />
-                    );
-                })}
-            </MapContainer>
-        </div>
-    );
+          return (
+            <Marker
+              key={`custom-${index}`}
+              position={[
+                parseFloat(entry.geolocation.lat),
+                parseFloat(entry.geolocation.lon),
+              ]}
+              icon={getCustomIcon(iconColor)}
+            />
+          );
+        })}
+      </MapContainer>
+    </div>
+  );
 };
-
-// Memoize the Marker component to prevent unnecessary re-renders
-const MarkerComponent = ({ position, icon }) => {
-    return <Marker position={position} icon={icon} />;
-};
-
-const MemoizedMarker = React.memo(MarkerComponent);
 
 export default MapComponent;
-
-
-
-
-

@@ -10,11 +10,11 @@
 const { onDocumentUpdated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 const functions = require("firebase-functions")
-const cors = require("cors");
 require("dotenv").config();
 const stripe = require("stripe")(String(process.env.STRIPE_SECRET_KEY));
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY
 const axios = require('axios');
+const cors = require('cors')({ origin: true });
 
 // Initialize the Firebase Admin SDK
 admin.initializeApp();
@@ -55,7 +55,7 @@ const recalculateMaxsAndStats = async (userId, field) => {
 exports.myfunction = onDocumentWritten("users_entries/{userId}/entries/{entryId}", async (event) => {
   const previousData = event.data.before ? event.data.before.data() : null;
   const data = event.data.after ? event.data.after.data() : null;
-  const maxConverter = { "Size": -1, "Typology": -1, "Price": 1 }
+  const maxConverter = { "Size": -1, "Typology": -1, "Price": 1 , "Coziness":-1}
   let changed = false;
   let userData;
   let userDocRef
@@ -104,7 +104,7 @@ exports.myfunction = onDocumentWritten("users_entries/{userId}/entries/{entryId}
   }
 });
 
-dummy_values = async (entryId, poiId) =>  {
+dummy_values = async (entryId, poiId) => {
   // Check if "distances" document exists for the entryId
   const distancesDocRef = db.collection('distances').doc(entryId);
   const distancesDoc = await distancesDocRef.get();
@@ -130,94 +130,94 @@ dummy_values = async (entryId, poiId) =>  {
 }
 
 exports.calculateDistance = functions.https.onCall(async (data, context) => {
-  const { entryId, poiId } = data.data;
-  if (1)
-    return dummy_values(entryId, poiId)
-  else {
-    try {
- // Get data passed from the front-end
+    const { entryId, poiId } = data.data;
+    if (1)
+      return dummy_values(entryId, poiId)
+    else {
+      try {
+        // Get data passed from the front-end
 
-      // Validate inputs
-      if (!entryId || !poiId) {
-        throw new functions.https.HttpsError(
-          'invalid-argument',
-          'Both entryId and poiId are required.'
-        );
-      }
-
-      // Check if "distances" document exists for the entryId
-      const distancesDocRef = db.collection('distances').doc(entryId);
-      const distancesDoc = await distancesDocRef.get();
-
-      if (distancesDoc.exists) {
-        const distancesData = distancesDoc.data();
-        if (distancesData[poiId]) {
-          // If distances already exist, return them
-          return distancesData[poiId];
+        // Validate inputs
+        if (!entryId || !poiId) {
+          throw new functions.https.HttpsError(
+            'invalid-argument',
+            'Both entryId and poiId are required.'
+          );
         }
-      }
 
-      // Retrieve geolocation data for both entry and POI
-      const entryDoc = await db.collection('entries').doc(entryId).get();
-      if (!entryDoc.exists) {
-        throw new functions.https.HttpsError('not-found', 'Entry not found.');
-      }
+        // Check if "distances" document exists for the entryId
+        const distancesDocRef = db.collection('distances').doc(entryId);
+        const distancesDoc = await distancesDocRef.get();
 
-      const poiDoc = await db.collection('pointsOfInterest').doc(poiId).get();
-      if (!poiDoc.exists) {
-        throw new functions.https.HttpsError('not-found', 'Point of Interest not found.');
-      }
-
-      const entryData = entryDoc.data();
-      const poiData = poiDoc.data();
-      const entryGeoloc = entryData.geoloc; // Expecting { lat, lng }
-      const poiGeoloc = poiData.geoloc;    // Expecting { lat, lng }
-
-      if (!entryGeoloc || !poiGeoloc) {
-        throw new functions.https.HttpsError('invalid-argument', 'Geolocation data is missing for entry or POI.');
-      }
-
-      // Use Google Maps Distance Matrix API to calculate distances for driving, walking, and transit
-      const modes = ['driving', 'walking', 'transit'];
-      const departureTime = Math.floor(new Date().setHours(9, 0, 0, 0) / 1000); // 9:00 AM timestamp
-
-      const distances = {};
-
-      for (const mode of modes) {
-        const url = `https://maps.googleapis.com/maps/api/distancematrix/json`;
-
-        const response = await axios.get(url, {
-          params: {
-            origins: `${entryGeoloc.lat},${entryGeoloc.lng}`,
-            destinations: `${poiGeoloc.lat},${poiGeoloc.lng}`,
-            key: GOOGLE_MAPS_API_KEY,
-            mode: mode,
-            departure_time: departureTime
+        if (distancesDoc.exists) {
+          const distancesData = distancesDoc.data();
+          if (distancesData[poiId]) {
+            // If distances already exist, return them
+            return distancesData[poiId];
           }
-        });
-
-        const result = response.data;
-
-        if (result.status !== 'OK' || result.rows[0].elements[0].status !== 'OK') {
-          throw new functions.https.HttpsError('internal', `Error fetching ${mode} data from Google Maps API.`);
         }
 
-        distances[mode] = result.rows[0].elements[0].duration.value; // Duration in seconds
+        // Retrieve geolocation data for both entry and POI
+        const entryDoc = await db.collection('entries').doc(entryId).get();
+        if (!entryDoc.exists) {
+          throw new functions.https.HttpsError('not-found', 'Entry not found.');
+        }
+
+        const poiDoc = await db.collection('pointsOfInterest').doc(poiId).get();
+        if (!poiDoc.exists) {
+          throw new functions.https.HttpsError('not-found', 'Point of Interest not found.');
+        }
+
+        const entryData = entryDoc.data();
+        const poiData = poiDoc.data();
+        const entryGeoloc = entryData.geoloc; // Expecting { lat, lng }
+        const poiGeoloc = poiData.geoloc;    // Expecting { lat, lng }
+
+        if (!entryGeoloc || !poiGeoloc) {
+          throw new functions.https.HttpsError('invalid-argument', 'Geolocation data is missing for entry or POI.');
+        }
+
+        // Use Google Maps Distance Matrix API to calculate distances for driving, walking, and transit
+        const modes = ['driving', 'walking', 'transit'];
+        const departureTime = Math.floor(new Date().setHours(9, 0, 0, 0) / 1000); // 9:00 AM timestamp
+
+        const distances = {};
+
+        for (const mode of modes) {
+          const url = `https://maps.googleapis.com/maps/api/distancematrix/json`;
+
+          const response = await axios.get(url, {
+            params: {
+              origins: `${entryGeoloc.lat},${entryGeoloc.lng}`,
+              destinations: `${poiGeoloc.lat},${poiGeoloc.lng}`,
+              key: GOOGLE_MAPS_API_KEY,
+              mode: mode,
+              departure_time: departureTime
+            }
+          });
+
+          const result = response.data;
+
+          if (result.status !== 'OK' || result.rows[0].elements[0].status !== 'OK') {
+            throw new functions.https.HttpsError('internal', `Error fetching ${mode} data from Google Maps API.`);
+          }
+
+          distances[mode] = result.rows[0].elements[0].duration.value; // Duration in seconds
+        }
+
+        // Store distances back to Firestore under the "distances" collection
+        await distancesDocRef.set({
+          [poiId]: distances
+        }, { merge: true });
+
+        // Return calculated distances
+        return distances;
+
+      } catch (error) {
+        console.error(error);
+        throw new functions.https.HttpsError('internal', 'An error occurred while calculating distances.');
       }
-
-      // Store distances back to Firestore under the "distances" collection
-      await distancesDocRef.set({
-        [poiId]: distances
-      }, { merge: true });
-
-      // Return calculated distances
-      return distances;
-
-    } catch (error) {
-      console.error(error);
-      throw new functions.https.HttpsError('internal', 'An error occurred while calculating distances.');
     }
-  }
 });
 
 
