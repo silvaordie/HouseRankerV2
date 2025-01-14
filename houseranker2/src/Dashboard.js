@@ -167,7 +167,7 @@ const Dashboard = () => {
 
         const docData = docSnapshot.data();
         Object.entries(pointsOfInterest).forEach(([poiId, poi]) => {
-          if (docData[poiId]) {
+          if (docData && docData[poiId]) {
             setDistances(prevDistances => ({
               ...prevDistances,
               [entryId]: {

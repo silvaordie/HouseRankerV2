@@ -14,6 +14,7 @@
   },
   "main": "index.js",
   "dependencies": {
+    "@googlemaps/google-maps-services-js": "^3.4.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "firebase-admin": "^12.6.0",
