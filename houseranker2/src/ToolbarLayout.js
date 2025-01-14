@@ -13,7 +13,8 @@ import {
   Box,
   Typography,
 } from "@mui/material";
-import { doc, getDoc } from "firebase/firestore"; // Import Firestore functions
+import { signOut } from "firebase/auth"; // Firebase auth for sign out
+import { auth } from "./firebase"; // Adjust with your Firebase config file
 
 
 const ToolbarLayout = ({ userData, db }) => {
@@ -21,7 +22,15 @@ const ToolbarLayout = ({ userData, db }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const handleProfileIconClick = () => setDrawerOpen(true);
   const closeDrawer = () => setDrawerOpen(false);
-  
+  // Log out function
+  const handleLogout = async () => {
+    try {
+      await signOut(auth); // Sign out user from Firebase
+      navigate("/"); // Navigate to login page after sign-out
+    } catch (error) {
+      console.error("Error logging out:", error);
+    }
+  };
   /*   // Define the fetchData function
     const fetchData = useCallback(async () => {
       if (user && !userData.email) {
@@ -47,11 +56,11 @@ const ToolbarLayout = ({ userData, db }) => {
       fetchData();
     }, [fetchData]); // Dependency to call fetchData when its memoized value changes
    */
-    const formattedDate = userData ? new Date(userData.createdAt).toLocaleString('en-UK', {
-      year: 'numeric',
-      month: 'long',
-      day: '2-digit',
-    }) : new Date(0);
+  const formattedDate = userData ? new Date(userData.createdAt).toLocaleString('en-UK', {
+    year: 'numeric',
+    month: 'long',
+    day: '2-digit',
+  }) : new Date(0);
   return (
     <Box sx={{ flexGrow: 1 }}>
       {/* Top Toolbar */}
@@ -159,6 +168,26 @@ const ToolbarLayout = ({ userData, db }) => {
               Get more tokens
             </Button>
           </Box>
+          {/* Log Out Button at the Bottom */}
+      {userData && (
+        <Box sx={{ position: "absolute", bottom: 16, right: 16, left: 16 }}>
+          <Button
+            fullWidth
+            variant="contained"
+            color="error"
+            sx={{
+              height: 40,
+              borderRadius: 0,
+              backgroundColor: "#808080", // Grey color
+              color: "white",
+              textTransform: "none",
+            }}
+            onClick={handleLogout}
+          >
+            Log Out
+          </Button>
+        </Box>
+      )}
         </Drawer>)}
     </Box>
   );

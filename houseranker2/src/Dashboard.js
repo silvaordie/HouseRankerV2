@@ -12,15 +12,16 @@ import './Dashboard.css';
 import 'font-awesome/css/font-awesome.min.css';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import { db } from "./firebase"; // Import the Firestore instance
-import { updateDoc, doc, getDoc, setDoc, collection, getDocs, deleteDoc } from "firebase/firestore"; // Import Firestore functions
+import { updateDoc, doc, getDoc, setDoc, collection, getDocs, deleteDoc, onSnapshot } from "firebase/firestore"; // Import Firestore functions
 import { useAuth } from "./AuthContext"; // Import your custom auth hook/context provider
 import AddressSearch from "./AddressSearch";
 import MapComponent from './MapComponent';  // Import MapComponent
 import ToolbarLayout from './ToolbarLayout';
 import { useNavigate } from "react-router-dom";
-
+import Tooltip from '@mui/material/Tooltip';
+import LinkIcon from '@mui/icons-material/Link';
 import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/functions";
-
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 const Dashboard = () => {
   const useStateWithCache = (key, defaultValue) => {
@@ -85,7 +86,6 @@ const Dashboard = () => {
   };*/
 
   useEffect(() => {
-    console.log(sliderValues)
     if (!entries || Object.keys(entries).length === 0) return;
     const calculateScores = () => {
       const updatedScores = { ...scores };
@@ -365,7 +365,7 @@ const Dashboard = () => {
 
     const path = "users_" + collectionPath;
     const userdocRef = doc(db, path, currentUser.uid);
-    const userdocSnap = await getDoc(userdocRef);
+    let userdocSnap = await getDoc(userdocRef);
     const subCollectionRef = collection(userdocRef, collectionPath); // Sub-collection named as `collectionPath`
     const subDocRef = doc(subCollectionRef, documentId);
     const subDdocSnap = await getDoc(subDocRef);
@@ -374,6 +374,7 @@ const Dashboard = () => {
       consumeToken(collectionPath)
 
     await setDoc(subDocRef, data, { merge: true });
+    await setDoc(userdocRef, { processed: false }, { merge: true });
 
     if (collectionPath === "entries" && (!userdocSnap.exists() || !userdocSnap.data().maxs)) {
       const maxDefaults = { "entries": { "Size": data.Size, "Typology": data.Typology, "Price": data.Price, "Coziness": 0 }, "pointsOfInterest": { "walking": 0, "transport": 0, "car": 0 } };
@@ -381,6 +382,28 @@ const Dashboard = () => {
 
       await setDoc(userdocRef, { "stats": bestDefaults[collectionPath] }, { merge: true });
       await setDoc(userdocRef, { "maxs": maxDefaults[collectionPath] }, { merge: true });
+      setUserMaxs(maxDefaults)
+      setUserStats(bestDefaults)
+    }
+    else {
+      // Wait for real-time updates using onSnapshot
+      const unsubscribe = onSnapshot(userdocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const userData = docSnap.data();
+          console.log(userData.processed)
+
+          // Check if the necessary fields are updated
+          if (userData.processed) {
+            setUserMaxs(userData.maxs || {});
+            setUserStats(userData.stats || {});
+
+            // Unsubscribe once the condition is satisfied
+            unsubscribe();
+          }
+        } else {
+          console.error("Document does not exist!");
+        }
+      });
     }
   };
   // Save point of interest
@@ -528,8 +551,8 @@ const Dashboard = () => {
 
       // Handle "Score" key separately since it's stored directly in the entry
       if (sortConfig.key === 'Score') {
-        aValue = scores[aEntry.Adress] || 0;
-        bValue = scores[bEntry.Adress] || 0;
+        aValue = scores[aEntry.info.Address] || 0;
+        bValue = scores[bEntry.info.Address] || 0;
       } else {
         // Default to the `info` object for other keys
         aValue = aEntry.info[sortConfig.key];
@@ -553,7 +576,16 @@ const Dashboard = () => {
 
     return sortedEntries.map(([entryId, entry], rowIndex) => {
       const baseDataCells = [
-        <td key="link"><a href={entry.info.Link} target="_blank" rel="noopener noreferrer">{entry.info.Link}</a></td>,
+        <td key="link">
+          {/* Use Tooltip and LinkIcon */}
+          <Tooltip title={entry.info.Link} arrow>
+            <span>
+              <a href={entry.info.Link} target="_blank" rel="noopener noreferrer">
+                <LinkIcon style={{ fontSize: '18px', cursor: 'pointer' }} />
+              </a>
+            </span>
+          </Tooltip>
+        </td>,
         <td key="address">{entry.info.Address}</td>,
         <td key="description">{entry.info.Description}</td>,
         <td key="price">{entry.info.Price}</td>,
@@ -602,14 +634,14 @@ const Dashboard = () => {
 
   const handleDeleteEntry = () => {
     if (!currentEntry) return; // Exit the function if currentEntry is null or undefined
-  
+
     const updatedEntries = { ...entries }; // Create a shallow copy of entries
     delete updatedEntries[currentEntry.info.Address]; // Remove the entry using the address
-  
+
     setEntries(updatedEntries); // Update the entries state with the new object
     setCurrentEntry(null); // Reset the current entry after deletion
     setIsNewHouseOpen(false); // Close the modal after deletion
-  
+
     delUserData("entries", currentEntry.info.Address); // Remove the user data from the database or backend
   };
 
@@ -665,13 +697,14 @@ const Dashboard = () => {
       if (address)
         updatedEntry.info.Address = address;
 
-        setEntries((prevEntries) => ({
-          ...prevEntries,
-          [address]: { 
-            ...prevEntries[address], // Spread existing properties of the current entry
-            info: updatedEntry.info, // Update the `info` section
-          },
-        }));
+      setEntries((prevEntries) => ({
+        ...prevEntries,
+        [address]: {
+          ...prevEntries[address], // Spread existing properties of the current entry
+          info: updatedEntry.info, // Update the `info` section
+          geolocation: address ? updatedEntry.geolocation : geolocation
+        },
+      }));
 
       add_update_place("entries", updatedEntry.info.Address, updatedEntry.info)
     }
@@ -688,8 +721,17 @@ const Dashboard = () => {
 
         {/* Sliders Section */}
         <div className="slider-container">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}
+          >
             <Typography variant="h6">Importance</Typography>
+
+            {/* Tooltip Icon for Importance Section */}
+            <Tooltip title="How important are these factors to you? Adujst the sliders accordingly from left to right" arrow>
+              <span style={{ cursor: 'pointer' }}>
+                <HelpOutlineIcon style={{ color: '#fff', backgroundColor: '#808080', borderRadius: '50%', padding: '0px', fontSize: '20px' }} />
+              </span>
+            </Tooltip>
           </div>
 
           {[...["Price", "Size", "Typology", "Coziness"]].map((name, i) => (
@@ -713,7 +755,18 @@ const Dashboard = () => {
         <div className="list-map-container">
           {/* List Section */}
           <div className="dynamic-list">
-            <Typography variant="h6">Points of interest</Typography>
+          <div
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}
+          >
+            <Typography variant="h6">Points of Interest</Typography>
+
+            {/* Tooltip Icon for poi Section */}
+            <Tooltip title="Here are your points of interest, how important is to reach them by foot, car or train and how far they should from a property" arrow>
+              <span style={{ cursor: 'pointer' }}>
+                <HelpOutlineIcon style={{ color: '#fff', backgroundColor: '#808080', borderRadius: '50%', padding: '0px', fontSize: '20px' }} />
+              </span>
+            </Tooltip>
+          </div>
             {pointsOfInterest.length === 0 ? (
               <p>You have no points of interest</p>
             ) : (
@@ -780,7 +833,18 @@ const Dashboard = () => {
       </div>
       {/* Main Section - Dynamic Table */}
       <div className="bottom-list-container">
-        <Typography variant="h6">Main Table</Typography>
+      <div
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}
+          >
+            <Typography variant="h6">Main Table</Typography>
+
+            {/* Tooltip Icon for Importance Section */}
+            <Tooltip title="Here is the list of all the properties you are interested in and their details. You can modify them by clicking in the tabl eentry or add a new one in the button below" arrow>
+              <span style={{ cursor: 'pointer' }}>
+                <HelpOutlineIcon style={{ color: '#fff', backgroundColor: '#808080', borderRadius: '50%', padding: '0px', fontSize: '20px' }} />
+              </span>
+            </Tooltip>
+          </div>
         <table className="rounded-table">
           <thead>
             {renderTableHeaders()}

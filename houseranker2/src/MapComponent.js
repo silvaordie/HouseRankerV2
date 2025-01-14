@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -35,7 +35,8 @@ const CenterAndZoomUpdater = ({ pointsOfInterest, sortedEntries }) => {
 
     // Add sorted entries to bounds
     sortedEntries.forEach(([_, entry]) => {
-      bounds.extend([entry.geolocation.lat, entry.geolocation.lon]);
+      if(entry && entry.geolocation)
+        bounds.extend([entry.geolocation.lat, entry.geolocation.lon]);
     });
 
     if (bounds.isValid()) {
@@ -106,6 +107,7 @@ const MapComponent = ({ pointsOfInterest, sortedEntries }) => {
               />
             );
           }
+          return null
         })}
       </MapContainer>
     </div>

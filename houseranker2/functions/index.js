@@ -59,9 +59,9 @@ exports.myfunction = onDocumentWritten("users_entries/{userId}/entries/{entryId}
   let changed = false;
   let userData;
   let userDocRef
+  userDocRef = db.collection("users_entries").doc(event.params.userId);
 
   if (!data) {
-    userDocRef = db.collection("users_entries").doc(event.params.userId);
     const userDoc = await userDocRef.get(); // Admin SDK uses `.get()` instead of `getDoc`
     userData = userDoc.data();
 
@@ -72,7 +72,6 @@ exports.myfunction = onDocumentWritten("users_entries/{userId}/entries/{entryId}
     }
     return;
   }
-
   for (const [field, value] of Object.entries(data)) {
     if ((!previousData || value !== previousData[field]) && (field !== "Address" && field !== "Link" && field !== "Description")) {
       if (!changed) {
@@ -98,10 +97,11 @@ exports.myfunction = onDocumentWritten("users_entries/{userId}/entries/{entryId}
         await userDocRef.set({ stats: newBests }, { merge: true });
         console.log("Updated stats:", newBests);
       } else if (previousData && (previousData[field] === userData.stats[field] || previousData[field] === userData.maxs[field])) {
-        recalculateMaxsAndStats(event.params.userId, field);
+        await recalculateMaxsAndStats(event.params.userId, field);
       }
     }
   }
+  await userDocRef.set({ processed: true }, { merge: true });
 });
 
 dummy_values = async (entryId, poiId) => {

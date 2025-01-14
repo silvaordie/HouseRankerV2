@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { TextField, InputAdornment, List, ListItem, ListItemButton, ListItemText, Paper, IconButton } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import axios from "axios";
-
 const AddressSearch = ({ label, value, disabled, onChange, disableInteraction }) => {
   const [query, setQuery] = useState(value || ""); // Initialize with the provided value
   const [suggestions, setSuggestions] = useState([]);
@@ -21,11 +20,28 @@ const AddressSearch = ({ label, value, disabled, onChange, disableInteraction })
         params: {
           q: query,
           format: "json",
-          addressdetails: 1,
+          addressdetails: 1, // Request detailed address components
           limit: 5,
         },
       });
-      setSuggestions(response.data);
+
+      // Map the response to extract only the basic address fields
+      const formattedSuggestions = response.data.map((item) => {
+        const { address } = item;
+
+        return {
+          street: address.road || null,
+          door: address.house_number || null,
+          city: address.city || address.town || address.village || null,
+          postalCode: address.postcode || null,
+          country: address.country || null,
+          displayName: item.display_name, // For debugging or showing full address
+          latitude: item.lat,
+          longitude: item.lon,
+        };
+      });
+
+      setSuggestions(formattedSuggestions); // Store the formatted results
     } catch (error) {
       console.error("Error fetching address suggestions:", error);
     } finally {
@@ -63,18 +79,28 @@ const AddressSearch = ({ label, value, disabled, onChange, disableInteraction })
   };
 
   const handleSuggestionClick = (suggestion) => {
-    const selectedAddress = suggestion.display_name || suggestion; // Handle "Searching..." or actual results
+    // Create simplified address string
+    const simplifiedAddress = [
+      suggestion.door ? suggestion.door : "",
+      suggestion.street || "",
+      suggestion.city || "",
+      suggestion.postalCode || "",
+      suggestion.country || ""
+    ]
+      .filter(Boolean) // Remove any empty strings
+      .join(", "); // Join with commas
+
     const geolocation = {
-      lat: suggestion.lat,
-      lon: suggestion.lon,
+      lat: suggestion.latitude,
+      lon: suggestion.longitude,
     };
 
-    setQuery(selectedAddress);
-    setSuggestions([]);
+    setQuery(simplifiedAddress); // Update input with the simplified address
+    setSuggestions([]); // Clear suggestions
 
-    // Send both the address and geolocation to the parent component
+    // Send both the simplified address and geolocation to the parent component
     if (onChange) {
-      onChange(selectedAddress, geolocation); // Pass address and geolocation
+      onChange(simplifiedAddress, geolocation); // Pass simplified address and geolocation
     }
   };
 
@@ -112,7 +138,10 @@ const AddressSearch = ({ label, value, disabled, onChange, disableInteraction })
                   disabled={suggestion === "Searching..."}
                 >
                   <ListItemText
-                    primary={suggestion.display_name || suggestion}
+                    primary={
+                      // Display simplified address in the suggestions list
+                      `${suggestion.door ? suggestion.door + " " : ""}${suggestion.street || ""} ${suggestion.city || ""} ${suggestion.postalCode || ""} ${suggestion.country || ""}`
+                    }
                   />
                 </ListItemButton>
               </ListItem>
