@@ -814,7 +814,7 @@ const Dashboard = () => {
                   </div>
 
 
-                  <button onClick={() => openModal(point)}>Edit Interest Point</button>
+                  <button className="button" onClick={() => openModal(point)}>Edit Interest Point</button>
                 </div>
               )))}
             <button onClick={() => openModal()} className="add-point-button">
