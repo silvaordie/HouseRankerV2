@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AppBar,
@@ -14,7 +14,7 @@ import {
   Typography,
 } from "@mui/material";
 import { signOut } from "firebase/auth"; // Firebase auth for sign out
-import { auth } from "./firebase"; // Adjust with your Firebase config file
+import { auth } from "../firebase"; // Adjust with your Firebase config file
 
 
 const ToolbarLayout = ({ userData, db }) => {

@@ -4,7 +4,7 @@ import {
   useElements,
   PaymentElement,
 } from "@stripe/react-stripe-js";
-import { useAuth } from "./AuthContext";
+import { useAuth } from "../AuthContext";
 
 const CheckoutPage = (amount) => {
   const stripe = useStripe();

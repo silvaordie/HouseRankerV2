@@ -1,5 +1,5 @@
 // Dashboard.js
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Modal from '@mui/material/Modal';
 import Box from '@mui/material/Box';
 import Slider from '@mui/material/Slider';
@@ -11,12 +11,12 @@ import './Dashboard.css';
 //import { useNavigate } from 'react-router-dom';
 import 'font-awesome/css/font-awesome.min.css';
 import '@fortawesome/fontawesome-free/css/all.min.css';
-import { db } from "./firebase"; // Import the Firestore instance
+import { db } from "../firebase"; // Import the Firestore instance
 import { updateDoc, doc, getDoc, setDoc, collection, getDocs, deleteDoc, onSnapshot } from "firebase/firestore"; // Import Firestore functions
-import { useAuth } from "./AuthContext"; // Import your custom auth hook/context provider
-import AddressSearch from "./AddressSearch";
-import MapComponent from './MapComponent';  // Import MapComponent
-import ToolbarLayout from './ToolbarLayout';
+import { useAuth } from "../AuthContext"; // Import your custom auth hook/context provider
+import AddressSearch from "../components/AddressSearch";
+import MapComponent from '../components/MapComponent';  // Import MapComponent
+import ToolbarLayout from '../components/ToolbarLayout';
 import { useNavigate } from "react-router-dom";
 import Tooltip from '@mui/material/Tooltip';
 import LinkIcon from '@mui/icons-material/Link';
@@ -24,22 +24,22 @@ import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 const Dashboard = () => {
-  const useStateWithCache = (key, defaultValue) => {
+  // const useStateWithCache = (key, defaultValue) => {
 
-    const [value, setValue] = useState(() => {
+  //   const [value, setValue] = useState(() => {
 
-      const cachedValue = localStorage.getItem(key);
-      return cachedValue !== "undefined" ? JSON.parse(cachedValue) : defaultValue;
-    });
+  //     const cachedValue = localStorage.getItem(key);
+  //     return cachedValue !== "undefined" ? JSON.parse(cachedValue) : defaultValue;
+  //   });
 
-    const setCachedValue = (newValue) => {
-      setValue(newValue); // Update React state
+  //   const setCachedValue = (newValue) => {
+  //     setValue(newValue); // Update React state
 
-      localStorage.setItem(key, JSON.stringify(newValue)); // Update cache
-    };
+  //     localStorage.setItem(key, JSON.stringify(newValue)); // Update cache
+  //   };
 
-    return [value, setCachedValue];
-  };
+  //   return [value, setCachedValue];
+  // };
 
   const navigate = useNavigate();
 
@@ -239,6 +239,7 @@ const Dashboard = () => {
   }
   useEffect(() => {
     fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     // Trigger loadDistances() only after entries and pointsOfInterest have been set for the first time
@@ -246,6 +247,7 @@ const Dashboard = () => {
       loadDistances();
       setIsDataLoaded(true);  // Set the flag to true so it doesn't run again
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entries, pointsOfInterest, isDataLoaded]);
 
   const saveUserData = async (updatedData) => {
@@ -618,6 +620,7 @@ const Dashboard = () => {
         </tr>
       );
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, sortedEntries, pointsOfInterest, distances]);
 
   const renderTableRows = () => {

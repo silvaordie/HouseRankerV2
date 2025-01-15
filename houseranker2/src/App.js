@@ -1,12 +1,9 @@
 // App.js
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import Login from './LoginPage';
-import ResetPassword from './ResetPassword';
-import VerifyCode from './VerifyCode';
-import ChangePassword from './ChangePassword';
-import Dashboard from './Dashboard';
-import SelectPlan from './SelectPlan';
+import Login from './pages/LoginPage';
+import Dashboard from './pages/Dashboard';
+import SelectPlan from './pages/SelectPlan';
 
 import { useAuth } from "./AuthContext";
 
@@ -19,9 +16,6 @@ const App = () => {
                 <Route path="/" element={!currentUser ? (
                     <Login />) : (
                     <Dashboard />)} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/verify-code" element={<VerifyCode />} />
-                <Route path="/change-password" element={<ChangePassword />} />
                 <Route path="/select-plan" element={<SelectPlan />} />
                 <Route path="/dashboard" element={currentUser ? (
                     <Dashboard />) : (

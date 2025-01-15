@@ -1,11 +1,7 @@
 // src/LoginPage.js
-import "./App.css"; // Ensure this file contains the new styles for the landing page
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import Spinner from "./Spinner";
+import "../App.css"; // Ensure this file contains the new styles for the landing page
+import React from "react";
 import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
   signInWithPopup,
 } from "firebase/auth";
 import {
@@ -13,7 +9,7 @@ import {
   db,
   googleProvider,
   facebookProvider,
-} from "./firebase";
+} from "../firebase";
 import { setDoc, doc, getDoc } from "firebase/firestore";
 
 const handleGoogleSignIn = async () => {
@@ -54,17 +50,17 @@ const LoginPage = () => {
           <div className="item">
             <i className="fas fa-search item-icon"></i> {/* Example icon: Search */}
             <h3>Discover</h3>
-            <p>Explore various locations and homes at your fingertips.</p>
+            <p>Find houses and apartments that fit the criteria you are looking for.</p>
           </div>
           <div className="item">
             <i className="fas fa-compass item-icon"></i> {/* Example icon: Compass */}
-            <h3>Compare</h3>
-            <p>Compare options based on your preferences and needs.</p>
+            <h3>Plan ahead</h3>
+            <p>Plan how long it will take to commute to the Interest Points in your daily routine.</p>
           </div>
           <div className="item">
             <i className="fas fa-heart item-icon"></i> {/* Example icon: Heart */}
-            <h3>Save</h3>
-            <p>Save your favorite homes and locations for easy access.</p>
+            <h3>Find the best</h3>
+            <p>We showcase you the best houses based on how important every detail regarding your next house is.</p>
           </div>
         </div>
       </div>

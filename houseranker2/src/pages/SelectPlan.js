@@ -22,7 +22,7 @@ function SelectPlan() {
   }, [searchParams]);
 
 
-  const prices = {"1-tier": 7.5, "2-tier": 15.5, "3-tier": 20.5}
+  const prices = { "1-tier": 7.5, "2-tier": 15.5, "3-tier": 20.5 }
   const plans = [
     {
       id: "1-tier",
@@ -44,7 +44,7 @@ function SelectPlan() {
   const handleSelect = (id) => {
     setSelectedPlan(id);
   };
-  
+
   return (
     <div style={styles.page}>
       <h1>Select Your Plan</h1>
@@ -83,14 +83,14 @@ function SelectPlan() {
         stripe={stripePromise}
         options={{
           mode: "payment",
-          amount: prices[selectedPlan]*100,
+          amount: prices[selectedPlan] * 100,
           currency: "chf",
         }}
       >
-        <CheckoutPage amount={prices[selectedPlan]*100} />
+        <CheckoutPage amount={prices[selectedPlan] * 100} />
         <button onClick={() => (window.location.href = "/dashboard")}>
-        Return to Dashboard
-      </button>
+          Return to Dashboard
+        </button>
       </Elements>
     </div>
   );

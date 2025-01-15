@@ -131,21 +131,25 @@ const AddressSearch = ({ label, value, disabled, onChange, disableInteraction })
       {!disableInteraction && suggestions.length > 0 && (
         <Paper style={{ position: "absolute", top: "50px", left: 0, right: 0, zIndex: 10 }}>
           <List>
-            {suggestions.map((suggestion, index) => (
-              <ListItem key={index} disablePadding>
-                <ListItemButton
-                  onClick={() => handleSuggestionClick(suggestion)}
-                  disabled={suggestion === "Searching..."}
-                >
-                  <ListItemText
-                    primary={
-                      // Display simplified address in the suggestions list
-                      `${suggestion.door ? suggestion.door + " " : ""}${suggestion.street || ""} ${suggestion.city || ""} ${suggestion.postalCode || ""} ${suggestion.country || ""}`
-                    }
-                  />
-                </ListItemButton>
+
+            {isSearching ? (
+              <ListItem disablePadding>
+                <ListItemText primary="Searching..." />
               </ListItem>
-            ))}
+            ) : (
+              suggestions.map((suggestion, index) => (
+                <ListItem key={index} disablePadding>
+                  <ListItemButton
+                    onClick={() => handleSuggestionClick(suggestion)}
+                    disabled={isSearching}
+                  >
+                    <ListItemText
+                      primary={`${suggestion.door ? suggestion.door + " " : ""}${suggestion.street || ""} ${suggestion.city || ""} ${suggestion.postalCode || ""} ${suggestion.country || ""}`}
+                    />
+                  </ListItemButton>
+                </ListItem>
+              ))
+            )}
           </List>
         </Paper>
       )}
