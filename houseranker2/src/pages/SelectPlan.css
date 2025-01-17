@@ -1,90 +1,147 @@
-/* Page Layout */
+/* General Page Styling */
 .page {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  font-family: Arial, sans-serif;
-  padding: 20px;
-  background-color: #000;
-  color: #fff;
-}
-
-.content-container {
-  display: flex;
-  gap: 40px;
+  height: 100vh;
   width: 100%;
-  max-width: 1200px;
-  margin-top: 20px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif, sans-serif;
 }
 
-/* Plan Section */
-.plan-section {
-  flex: 1;
+/* Left Panel */
+.left-panel {
+  flex: 0 0 70%; /* Occupies 80% of the page */
+  background-color: #f9f9f9; /* Bright theme */
+  color: #333; /* Dark text for contrast */
+  box-shadow: inset -2px 0px 10px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Centers content horizontally */
 }
 
 .card-container {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 15px;
+  width: 90%; /* Set the width of the cards to 90% of the panel */
 }
 
 .card {
-  border: 2px solid #ddd;
-  border-radius: 8px;
   padding: 20px;
-  background-color: #1a1a1a;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: white;
   cursor: pointer;
-  transition: transform 0.2s, border-color 0.2s;
-  color: #fff;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 150px; /* Example height; adjust as needed */
 }
 
-.card h2 {
-  margin: 0 0 10px;
-}
-
-.card ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.card:hover {
+  transform: scale(1.05);
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
 }
 
 .selected-card {
-  border-color: #007bff;
-  transform: scale(1.05);
+  border-color: #00b300;
+  background-color: #e6ffe6;
 }
 
-/* Checkout Section */
-.checkout-section {
-  flex: 1;
-  padding: 20px;
-  border: 2px solid #ddd;
-  border-radius: 8px;
-  background-color: #1a1a1a;
-  color: #fff;
+.card-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: 100%;
 }
 
-.success-message {
-  color: green;
-  margin-bottom: 20px;
+.plan-description {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-top: 0; /* Remove any extra margin from the top */
+  padding-top: 0; /* Ensure no padding is added at the top */
 }
 
-.error-message {
-  color: red;
-  margin-bottom: 20px;
+.plan-description h2 {
+  margin-bottom: 5px; /* Reduce the space between the title and list */
 }
 
+.plan-description ul {
+  padding-left: 20px; /* Keep padding for bullet points */
+  margin-top: 0; /* Remove top margin to bring bullet points closer to title */
+}
+
+.plan-description li {
+  margin-bottom: 5px; /* Adjust the spacing between list items if needed */
+}
+
+.plan-price {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 80%; /* 80% of the parent card's height */
+  aspect-ratio: 1 / 1; /* Maintains square shape */
+  border-radius: 15px; /* Rounded edges */
+  background-color: #e0e0e0; /* Light gray background */
+  color: #555; /* Dark gray text for contrast */
+  font-size: 1.2rem;
+  margin-left: 15px;
+  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+}
+
+
+/* Payment Status */
+.payment-success {
+  color: #007700;
+  margin-top: 20px;
+}
+
+.payment-failed {
+  color: #cc0000;
+  margin-top: 20px;
+}
+
+/* Right Panel */
+.right-panel {
+  flex: 0 0 30%; /* 20% width */
+  background-color: black; /* Black background for the right panel */
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* Center content vertically */
+  align-items: center; /* Center content horizontally */
+}
+.checkout-wrapper {
+  width: 90%; /* Set the form to be 90% of the panel's width */
+  margin: 0 auto; /* Centers the form horizontally */
+  padding: 20px; /* Optional: Add some padding if needed */
+}
+
+.buttons {
+  width: 100%; /* Ensure the form takes up 90% of the parent panel's width */
+  margin: 0 auto; /* Center the form horizontally */
+  display: flex;
+  flex-direction: column; /* Align children (PaymentElement and button) vertically */
+  justify-content: center; /* Center the children vertically */
+  align-items: center; /* Center the children horizontally */
+  padding: 10px; /* Optional padding */
+}
+/* Button Styling */
 .return-button {
+  width: 100%;
   margin-top: 20px;
   padding: 10px 20px;
-  background-color: #007bff;
-  color: #fff;
+  background-color: white;
+  color: black;
   border: none;
-  border-radius: 4px;
+  border-radius: 5px;
   cursor: pointer;
-  font-size: 1rem;
-  transition: background-color 0.2s, color 0.2s;
+  font-size: 16px;
 }
 
 .return-button:hover {
-  background-color: #0056b3;
+  background-color: gray;
+  color: white;
 }

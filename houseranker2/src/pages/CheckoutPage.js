@@ -5,6 +5,7 @@ import {
   PaymentElement,
 } from "@stripe/react-stripe-js";
 import { useAuth } from "../AuthContext";
+import "./SelectPlan.css"; // Import the CSS file
 
 const CheckoutPage = (amount) => {
   const stripe = useStripe();
@@ -15,8 +16,7 @@ const CheckoutPage = (amount) => {
   const { currentUser } = useAuth();
 
   useEffect(() => {
-    if(currentUser)
-    {
+    if (currentUser) {
       const amount_value = amount.amount;
       setClientSecret(null)
       fetch("http://127.0.0.1:5001/housepickerv2/us-central1/createPaymentIntent", {
@@ -24,7 +24,7 @@ const CheckoutPage = (amount) => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify( {"amount": amount_value, "uid":currentUser.uid}),
+        body: JSON.stringify({ "amount": amount_value, "uid": currentUser.uid }),
       })
         .then((res) => res.json())
         .then((data) => setClientSecret(data.clientSecret));
@@ -88,16 +88,23 @@ const CheckoutPage = (amount) => {
 
   return (
     <>
-      <form id="payment-form" onSubmit={handleSubmit}>
-
+      <form className="checkout-wrapper" id="payment-form" onSubmit={handleSubmit}>
         <PaymentElement id="payment-element" options={paymentElementOptions} />
-        <button disabled={ !stripe || !elements} id="submit">
-          <span id="button-text">
-            {"Pay now"}
-          </span>
-        </button>
+        <div className="buttons">
+          <button className="return-button" disabled={!stripe || !elements} id="submit">
+            <span id="button-text">
+              {"Pay now"}
+            </span>
+          </button>
+          <button
+            onClick={() => (window.location.href = "/dashboard")}
+            className="return-button"
+          >
+            Return to Dashboard
+          </button>
+        </div>
       </form>
-    
+
     </>
   );
 };

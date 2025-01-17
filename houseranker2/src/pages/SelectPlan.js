@@ -4,6 +4,7 @@ import CheckoutPage from "./CheckoutPage";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { useSearchParams } from "react-router-dom";
+import "./SelectPlan.css"; // Import the CSS file
 
 if (process.env.REACT_APP_STRIPE_PUBLIC_KEY === undefined) {
   throw new Error("REACT_APP_STRIPE_PUBLIC_KEY is not defined");
@@ -46,95 +47,58 @@ function SelectPlan() {
   };
 
   return (
-    <div style={styles.page}>
-      <h1>Select Your Plan</h1>
-      <div style={styles.cardContainer}>
-        {plans.map((plan) => (
-          <div
-            key={plan.id}
-            style={{
-              ...styles.card,
-              ...(selectedPlan === plan.id ? styles.selectedCard : {}),
-            }}
-            onClick={() => handleSelect(plan.id)}
-          >
-            <h2>{plan.title}</h2>
-            <ul>
-              {plan.description.map((desc, index) => (
-                <li key={index}>{desc}</li>
-              ))}
-            </ul>
-            <Typography variant="h6">{prices[plan.id] + "$"}</Typography>
-
+    <div className="page">
+      {/* Left Side: Plan Selection */}
+      <div className="left-panel">
+        <h1>Select Your Plan</h1>
+        <div className="card-container">
+          {plans.map((plan) => (
+            <div
+              key={plan.id}
+              className={`card ${selectedPlan === plan.id ? "selected-card" : ""}`}
+              onClick={() => handleSelect(plan.id)}
+            >
+              <div className="card-content">
+                <div className="plan-description">
+                  <h2>{plan.title}</h2>
+                  <ul>
+                    {plan.description.map((desc, index) => (
+                      <li key={index}>{desc}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="plan-price">{prices[plan.id] + "$"}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        {paymentStatus === "succeeded" && (
+          <div className="payment-success">
+            <p>🎉 Your payment was successful! Thank you for your purchase.</p>
           </div>
-        ))}
+        )}
+        {paymentStatus === "failed" && (
+          <div className="payment-failed">
+            <p>⚠️ Payment failed. Please try again.</p>
+          </div>
+        )}
       </div>
-      {paymentStatus === "succeeded" && (
-        <div style={{ color: "green" }}>
-          <p>🎉 Your payment was successful! Thank you for your purchase.</p>
-        </div>
-      )}
-      {paymentStatus === "failed" && (
-        <div style={{ color: "red" }}>
-          <p>⚠️ Payment failed. Please try again.</p>
-        </div>
-      )}
-      <Elements
-        stripe={stripePromise}
-        options={{
-          mode: "payment",
-          amount: prices[selectedPlan] * 100,
-          currency: "chf",
-        }}
-      >
-        <CheckoutPage amount={prices[selectedPlan] * 100} />
-        <button onClick={() => (window.location.href = "/dashboard")}>
-          Return to Dashboard
-        </button>
-      </Elements>
+
+      {/* Right Side: CheckoutPage */}
+      <div className="right-panel">
+          <Elements
+            stripe={stripePromise}
+            options={{
+              mode: "payment",
+              amount: prices[selectedPlan] * 100,
+              currency: "chf",
+            }}
+          >
+            <CheckoutPage amount={prices[selectedPlan] * 100} />
+          </Elements>
+      </div>
     </div>
   );
 }
-
-const styles = {
-  page: {
-    textAlign: "center",
-    fontFamily: "Arial, sans-serif",
-    padding: "20px",
-  },
-  cardContainer: {
-    display: "flex",
-    justifyContent: "center",
-    gap: "20px",
-    marginTop: "20px",
-  },
-  card: {
-    border: "2px solid #ddd",
-    borderRadius: "8px",
-    padding: "20px",
-    width: "200px",
-    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-    cursor: "pointer",
-    transition: "transform 0.2s, border-color 0.2s",
-  },
-  selectedCard: {
-    borderColor: "#007bff",
-    transform: "scale(1.05)",
-  },
-  selectButton: {
-    marginTop: "10px",
-    padding: "10px 15px",
-    backgroundColor: "#ddd",
-    border: "none",
-    borderRadius: "4px",
-    cursor: "pointer",
-    fontSize: "1rem",
-    transition: "background-color 0.2s, color 0.2s",
-  },
-  selectedButton: {
-    backgroundColor: "#007bff",
-    color: "#fff",
-  },
-};
 
 export default SelectPlan;
