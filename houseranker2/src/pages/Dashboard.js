@@ -22,6 +22,7 @@ import Tooltip from '@mui/material/Tooltip';
 import LinkIcon from '@mui/icons-material/Link';
 import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/functions";
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import ButtonSelector from '../components/ButtonSelector';
 
 const Dashboard = () => {
   // const useStateWithCache = (key, defaultValue) => {
@@ -239,7 +240,7 @@ const Dashboard = () => {
   }
   useEffect(() => {
     fetchData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     // Trigger loadDistances() only after entries and pointsOfInterest have been set for the first time
@@ -247,7 +248,7 @@ const Dashboard = () => {
       loadDistances();
       setIsDataLoaded(true);  // Set the flag to true so it doesn't run again
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entries, pointsOfInterest, isDataLoaded]);
 
   const saveUserData = async (updatedData) => {
@@ -620,7 +621,7 @@ const Dashboard = () => {
         </tr>
       );
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, sortedEntries, pointsOfInterest, distances]);
 
   const renderTableRows = () => {
@@ -697,21 +698,26 @@ const Dashboard = () => {
   const saveOrUpdateEntry = () => {
     if (currentEntry) {
       const updatedEntry = currentEntry;
-      if (address)
+      if (address) {
         updatedEntry.info.Address = address;
 
-      setEntries((prevEntries) => ({
-        ...prevEntries,
-        [address]: {
-          ...prevEntries[address], // Spread existing properties of the current entry
-          info: updatedEntry.info, // Update the `info` section
-          geolocation: address ? updatedEntry.geolocation : geolocation
-        },
-      }));
+        setEntries((prevEntries) => ({
+          ...prevEntries,
+          [address]: {
+            ...prevEntries[address], // Spread existing properties of the current entry
+            info: updatedEntry.info, // Update the `info` section
+            geolocation: address ? updatedEntry.geolocation : geolocation
+          },
+        }));
 
-      add_update_place("entries", updatedEntry.info.Address, updatedEntry.info)
+        add_update_place("entries", updatedEntry.info.Address, updatedEntry.info)
+        setIsNewHouseOpen(false); // Close the modal
+      }
+      else
+        alert("Cannot save an entry without a Address !")
+
     }
-    setIsNewHouseOpen(false); // Close the modal
+
   };
 
   const colors = ["#db284e", "#db284e", "#db8829", "#c9db29", "#4caf50", "#007bff"]
@@ -758,18 +764,18 @@ const Dashboard = () => {
         <div className="list-map-container">
           {/* List Section */}
           <div className="dynamic-list">
-          <div
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}
-          >
-            <Typography variant="h6">Points of Interest</Typography>
+            <div
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}
+            >
+              <Typography variant="h6">Points of Interest</Typography>
 
-            {/* Tooltip Icon for poi Section */}
-            <Tooltip title="Here are your points of interest, how important is to reach them by foot, car or train and how far they should from a property" arrow>
-              <span style={{ cursor: 'pointer' }}>
-                <HelpOutlineIcon style={{ color: '#fff', backgroundColor: '#808080', borderRadius: '50%', padding: '0px', fontSize: '20px' }} />
-              </span>
-            </Tooltip>
-          </div>
+              {/* Tooltip Icon for poi Section */}
+              <Tooltip title="Here are your points of interest, how important is to reach them by foot, car or train and how far they should from a property" arrow>
+                <span style={{ cursor: 'pointer' }}>
+                  <HelpOutlineIcon style={{ color: '#fff', backgroundColor: '#808080', borderRadius: '50%', padding: '0px', fontSize: '20px' }} />
+                </span>
+              </Tooltip>
+            </div>
             {pointsOfInterest.length === 0 ? (
               <p>You have no points of interest</p>
             ) : (
@@ -836,18 +842,18 @@ const Dashboard = () => {
       </div>
       {/* Main Section - Dynamic Table */}
       <div className="bottom-list-container">
-      <div
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}
-          >
-            <Typography variant="h6">Main Table</Typography>
+        <div
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}
+        >
+          <Typography variant="h6">Main Table</Typography>
 
-            {/* Tooltip Icon for Importance Section */}
-            <Tooltip title="Here is the list of all the properties you are interested in and their details. You can modify them by clicking in the tabl eentry or add a new one in the button below" arrow>
-              <span style={{ cursor: 'pointer' }}>
-                <HelpOutlineIcon style={{ color: '#fff', backgroundColor: '#808080', borderRadius: '50%', padding: '0px', fontSize: '20px' }} />
-              </span>
-            </Tooltip>
-          </div>
+          {/* Tooltip Icon for Importance Section */}
+          <Tooltip title="Here is the list of all the properties you are interested in and their details. You can modify them by clicking in the tabl eentry or add a new one in the button below" arrow>
+            <span style={{ cursor: 'pointer' }}>
+              <HelpOutlineIcon style={{ color: '#fff', backgroundColor: '#808080', borderRadius: '50%', padding: '0px', fontSize: '20px' }} />
+            </span>
+          </Tooltip>
+        </div>
         <table className="rounded-table">
           <thead>
             {renderTableHeaders()}
@@ -882,8 +888,8 @@ const Dashboard = () => {
       <Modal open={isNewHouseOpen} onClose={() => setIsNewHouseOpen(false)}>
         <Box className="modal-box" style={{ display: 'flex', flexDirection: 'column' }}>
           <Typography variant="h6">{isEditing ? 'Edit Entry' : 'Add New Entry'}</Typography>
-          {['Link', 'Address', 'Description', 'Typology', 'Size', 'Price', 'Coziness'].map(field => (
-            field === "Address" ?
+          {['Link', 'Address*', 'Description', 'Typology', 'Size', 'Price',].map(field => (
+            field === "Address*" ?
 
               <AddressSearch
                 key={"Address"}
@@ -903,7 +909,10 @@ const Dashboard = () => {
                 margin="normal"
               />
           ))}
-
+          <ButtonSelector
+            value={currentEntry && currentEntry.info && currentEntry.info.Coziness}
+            onChange={(e) => handleNewEntryChange("Coziness", e.target.value)}
+          />
           <Box marginTop={2}>
             <Button onClick={saveOrUpdateEntry}>
               {isEditing ? 'Update' : 'Save'}
