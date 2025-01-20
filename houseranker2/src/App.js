@@ -1,9 +1,10 @@
 // App.js
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate  } from 'react-router-dom';
 import Login from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import SelectPlan from './pages/SelectPlan';
+import ProtectedRoute from "./ProtectedRoute";
 
 import { useAuth } from "./AuthContext";
 
@@ -12,18 +13,31 @@ const App = () => {
 
     return (
         <Router>
-            <Routes>
-                <Route path="/" element={!currentUser ? (
-                    <Login />) : (
-                    <Dashboard />)} />
-                <Route path="/select-plan" element={<SelectPlan />} />
-                <Route path="/dashboard" element={currentUser ? (
-                    <Dashboard />) : (
-                    <Login />)} />
-                
-
-            </Routes>
-        </Router>
+        <Routes>
+          {/* Public route */}
+          <Route path="/" element={!currentUser ? <Login /> : <Dashboard />} />
+  
+          {/* Protected routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute currentUser={currentUser}>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/select-plan"
+            element={
+              <ProtectedRoute currentUser={currentUser}>
+                <SelectPlan />
+              </ProtectedRoute>
+            }
+          />
+          {/* Catch-all route for unmatched paths */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
     );
 };
 

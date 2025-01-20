@@ -20,6 +20,39 @@ const cors = require('cors')({ origin: true });
 admin.initializeApp();
 
 const db = admin.firestore();
+// Your secret key from Google reCAPTCHA
+const SECRET_KEY = '6Lfxwb0qAAAAAHd3ehvXMrVuuHvavGu0yp1UWO3b'; // Replace with your actual secret key from Google
+
+// Firebase Function to verify reCAPTCHA token
+exports.verifyRecaptcha = functions.https.onCall(async (data, context) => {
+  console.log("aaaaaaaaaaaaaaaa")
+  const token = data.token; // Token sent from the frontend
+
+  if (!token) {
+    throw new functions.https.HttpsError('invalid-argument', 'reCAPTCHA token is required.');
+  }
+
+  try {
+    // Send a request to Google reCAPTCHA verification endpoint
+    const response = await axios.post('https://www.google.com/recaptcha/api/siteverify', null, {
+      params: {
+        secret: SECRET_KEY,
+        response: token,
+      },
+    });
+
+    const success = response.data.success; // Boolean indicating if reCAPTCHA was successful
+
+    if (!success) {
+      throw new functions.https.HttpsError('permission-denied', 'reCAPTCHA verification failed.');
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error verifying reCAPTCHA:', error);
+    throw new functions.https.HttpsError('unknown', 'Error verifying reCAPTCHA.');
+  }
+});
 
 const recalculateMaxsAndStats = async (userId, field) => {
   const entriesSnap = await db.collection(`users_entries/${userId}/entries`).get();

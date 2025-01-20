@@ -1,0 +1,241 @@
+[debug] [2025-01-20T20:31:19.400Z] ----------------------------------------------------------------------
+[debug] [2025-01-20T20:31:19.401Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Joesey\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js emulators:start
+[debug] [2025-01-20T20:31:19.402Z] CLI Version:   13.27.0
+[debug] [2025-01-20T20:31:19.402Z] Platform:      win32
+[debug] [2025-01-20T20:31:19.402Z] Node Version:  v18.17.1
+[debug] [2025-01-20T20:31:19.403Z] Time:          Mon Jan 20 2025 21:31:19 GMT+0100 (Hora padrão da Europa Central)
+[debug] [2025-01-20T20:31:19.403Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-01-20T20:31:19.487Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-01-20T20:31:19.487Z] > authorizing via signed-in user (inf6joesey2@hotmail.com)
+[debug] [2025-01-20T20:31:19.564Z] java version "23.0.1" 2024-10-15
+
+[debug] [2025-01-20T20:31:19.565Z] Java(TM) SE Runtime Environment (build 23.0.1+11-39)
+Java HotSpot(TM) 64-Bit Server VM (build 23.0.1+11-39, mixed mode, sharing)
+
+[debug] [2025-01-20T20:31:19.585Z] Parsed Java major version: 23
+[info] i  emulators: Starting emulators: auth, functions, firestore, hosting, extensions {"metadata":{"emulator":{"name":"hub"},"message":"Starting emulators: auth, functions, firestore, hosting, extensions"}}
+[debug] [2025-01-20T20:31:19.587Z] Checked if tokens are valid: true, expires at: 1737408450887
+[debug] [2025-01-20T20:31:19.588Z] Checked if tokens are valid: true, expires at: 1737408450887
+[debug] [2025-01-20T20:31:19.589Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/housepickerv2 [none]
+[debug] [2025-01-20T20:31:20.329Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/housepickerv2 200
+[debug] [2025-01-20T20:31:20.329Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/housepickerv2 {"projectNumber":"891340696969","projectId":"housepickerv2","lifecycleState":"ACTIVE","name":"HousePickerV2","labels":{"firebase":"enabled"},"createTime":"2024-11-04T14:00:28.990468Z"}
+[debug] [2025-01-20T20:31:20.341Z] [logging] Logging Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-01-20T20:31:20.341Z] [auth] Authentication Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-01-20T20:31:20.341Z] [firestore] Firestore Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-01-20T20:31:20.341Z] [firestore.websocket] websocket server for firestore only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-01-20T20:31:20.342Z] [hosting] Hosting Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-01-20T20:31:20.342Z] assigned listening specs for emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"auth":[{"address":"127.0.0.1","family":"IPv4","port":9099}],"firestore":[{"address":"127.0.0.1","family":"IPv4","port":8080}],"firestore.websocket":[{"address":"127.0.0.1","family":"IPv4","port":9150}],"hosting":[{"address":"127.0.0.1","family":"IPv4","port":5000}]},"metadata":{"message":"assigned listening specs for emulators"}}
+[debug] [2025-01-20T20:31:20.346Z] [hub] writing locator at C:\Users\Joesey\AppData\Local\Temp\hub-housepickerv2.json
+[debug] [2025-01-20T20:31:20.352Z] [Extensions] Started Extensions emulator, this is a noop.
+[debug] [2025-01-20T20:31:20.355Z] [functions] Functions Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-01-20T20:31:20.355Z] [eventarc] Eventarc Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-01-20T20:31:20.355Z] [tasks] Cloud Tasks Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-01-20T20:31:20.355Z] late-assigned ports for functions and eventarc emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"auth":[{"address":"127.0.0.1","family":"IPv4","port":9099}],"firestore":[{"address":"127.0.0.1","family":"IPv4","port":8080}],"firestore.websocket":[{"address":"127.0.0.1","family":"IPv4","port":9150}],"hosting":[{"address":"127.0.0.1","family":"IPv4","port":5000}],"functions":[{"address":"127.0.0.1","family":"IPv4","port":5001}],"eventarc":[{"address":"127.0.0.1","family":"IPv4","port":9299}],"tasks":[{"address":"127.0.0.1","family":"IPv4","port":9499}]},"metadata":{"message":"late-assigned ports for functions and eventarc emulators"}}
+[warn] !  functions: The following emulators are not running, calls to these services from the Functions emulator will affect production: apphosting, database, pubsub, storage, dataconnect {"metadata":{"emulator":{"name":"functions"},"message":"The following emulators are not running, calls to these services from the Functions emulator will affect production: \u001b[1mapphosting, database, pubsub, storage, dataconnect\u001b[22m"}}
+[debug] [2025-01-20T20:31:20.358Z] defaultcredentials: writing to file C:\Users\Joesey\AppData\Roaming\firebase\inf6joesey2_hotmail_com_application_default_credentials.json
+[debug] [2025-01-20T20:31:20.360Z] Setting GAC to C:\Users\Joesey\AppData\Roaming\firebase\inf6joesey2_hotmail_com_application_default_credentials.json {"metadata":{"emulator":{"name":"functions"},"message":"Setting GAC to C:\\Users\\Joesey\\AppData\\Roaming\\firebase\\inf6joesey2_hotmail_com_application_default_credentials.json"}}
+[debug] [2025-01-20T20:31:20.360Z] Checked if tokens are valid: true, expires at: 1737408450887
+[debug] [2025-01-20T20:31:20.360Z] Checked if tokens are valid: true, expires at: 1737408450887
+[debug] [2025-01-20T20:31:20.361Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/housepickerv2/adminSdkConfig [none]
+[debug] [2025-01-20T20:31:20.588Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/housepickerv2/adminSdkConfig 200
+[debug] [2025-01-20T20:31:20.588Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/housepickerv2/adminSdkConfig {"projectId":"housepickerv2","storageBucket":"housepickerv2.firebasestorage.app"}
+[warn] !  firestore: Cloud Firestore Emulator does not support multiple databases yet. {"metadata":{"emulator":{"name":"firestore"},"message":"Cloud Firestore Emulator does not support multiple databases yet."}}
+[warn] !  firestore: Did not find a Cloud Firestore rules file specified in a firebase.json config file. {"metadata":{"emulator":{"name":"firestore"},"message":"Did not find a Cloud Firestore rules file specified in a firebase.json config file."}}
+[warn] !  firestore: The emulator will default to allowing all reads and writes. Learn more about this option: https://firebase.google.com/docs/emulator-suite/install_and_configure#security_rules_configuration. {"metadata":{"emulator":{"name":"firestore"},"message":"The emulator will default to allowing all reads and writes. Learn more about this option: https://firebase.google.com/docs/emulator-suite/install_and_configure#security_rules_configuration."}}
+[debug] [2025-01-20T20:31:20.609Z] Ignoring unsupported arg: auto_download {"metadata":{"emulator":{"name":"firestore"},"message":"Ignoring unsupported arg: auto_download"}}
+[debug] [2025-01-20T20:31:20.609Z] Ignoring unsupported arg: single_project_mode_error {"metadata":{"emulator":{"name":"firestore"},"message":"Ignoring unsupported arg: single_project_mode_error"}}
+[debug] [2025-01-20T20:31:20.609Z] Starting Firestore Emulator with command {"binary":"java","args":["-Dgoogle.cloud_firestore.debug_log_level=FINE","-Duser.language=en","-jar","C:\\Users\\Joesey\\.cache\\firebase\\emulators\\cloud-firestore-emulator-v1.19.8.jar","--host","127.0.0.1","--port",8080,"--websocket_port",9150,"--project_id","housepickerv2","--single_project_mode",true,"--functions_emulator","127.0.0.1:5001"],"optionalArgs":["port","webchannel_port","host","rules","websocket_port","functions_emulator","seed_from_export","project_id","single_project_mode"],"joinArgs":false,"shell":false,"port":8080} {"metadata":{"emulator":{"name":"firestore"},"message":"Starting Firestore Emulator with command {\"binary\":\"java\",\"args\":[\"-Dgoogle.cloud_firestore.debug_log_level=FINE\",\"-Duser.language=en\",\"-jar\",\"C:\\\\Users\\\\Joesey\\\\.cache\\\\firebase\\\\emulators\\\\cloud-firestore-emulator-v1.19.8.jar\",\"--host\",\"127.0.0.1\",\"--port\",8080,\"--websocket_port\",9150,\"--project_id\",\"housepickerv2\",\"--single_project_mode\",true,\"--functions_emulator\",\"127.0.0.1:5001\"],\"optionalArgs\":[\"port\",\"webchannel_port\",\"host\",\"rules\",\"websocket_port\",\"functions_emulator\",\"seed_from_export\",\"project_id\",\"single_project_mode\"],\"joinArgs\":false,\"shell\":false,\"port\":8080}"}}
+[info] i  firestore: Firestore Emulator logging to firestore-debug.log {"metadata":{"emulator":{"name":"firestore"},"message":"Firestore Emulator logging to \u001b[1mfirestore-debug.log\u001b[22m"}}
+[info] +  firestore: Firestore Emulator UI websocket is running on 9150. {"metadata":{"emulator":{"name":"firestore"},"message":"Firestore Emulator UI websocket is running on 9150."}}
+[debug] [2025-01-20T20:31:26.527Z] Checked if tokens are valid: true, expires at: 1737408450887
+[debug] [2025-01-20T20:31:26.527Z] Checked if tokens are valid: true, expires at: 1737408450887
+[debug] [2025-01-20T20:31:26.527Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/housepickerv2/sites 
+[debug] [2025-01-20T20:31:27.480Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/housepickerv2/sites 200
+[debug] [2025-01-20T20:31:27.481Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/housepickerv2/sites {"sites":[{"name":"projects/housepickerv2/sites/housepickerv2","defaultUrl":"https://housepickerv2.web.app","type":"DEFAULT_SITE"}]}
+[debug] [2025-01-20T20:31:27.481Z] Checked if tokens are valid: true, expires at: 1737408450887
+[debug] [2025-01-20T20:31:27.481Z] Checked if tokens are valid: true, expires at: 1737408450887
+[debug] [2025-01-20T20:31:27.481Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/housepickerv2/webApps/-/config [none]
+[debug] [2025-01-20T20:31:28.101Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/housepickerv2/webApps/-/config 200
+[debug] [2025-01-20T20:31:28.101Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/housepickerv2/webApps/-/config {"projectId":"housepickerv2","appId":"1:891340696969:web:eafbabd1c1815f974f0558","storageBucket":"housepickerv2.firebasestorage.app","apiKey":"AIzaSyAWyWRwJYUyTfHtb85rEL29g1_AK9RfDWg","authDomain":"housepickerv2.firebaseapp.com","messagingSenderId":"891340696969","measurementId":"G-ZQVS3CK4NE"}
+[debug] [2025-01-20T20:31:28.106Z] Checked if tokens are valid: true, expires at: 1737408450887
+[debug] [2025-01-20T20:31:28.106Z] Checked if tokens are valid: true, expires at: 1737408450887
+[debug] [2025-01-20T20:31:28.106Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/housepickerv2 [none]
+[debug] [2025-01-20T20:31:28.372Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/housepickerv2 200
+[debug] [2025-01-20T20:31:28.372Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/housepickerv2 {"projectId":"housepickerv2","projectNumber":"891340696969","displayName":"HousePickerV2","name":"projects/housepickerv2","resources":{"hostingSite":"housepickerv2"},"state":"ACTIVE","etag":"1_a76132d5-d239-4def-bca5-e74514f01b45"}
+[info] i  hosting[housepickerv2]: Serving hosting files from: build {"metadata":{"emulator":{"name":"hosting"},"message":"Serving hosting files from: \u001b[1mbuild\u001b[22m"}}
+[info] +  hosting[housepickerv2]: Local server: http://127.0.0.1:5000 {"metadata":{"emulator":{"name":"hosting"},"message":"Local server: \u001b[4m\u001b[1mhttp://127.0.0.1:5000\u001b[22m\u001b[24m"}}
+[debug] [2025-01-20T20:31:28.394Z] [Extensions] Connecting Extensions emulator, this is a noop.
+[info] i  functions: Watching "C:\Users\Joesey\Documents\GitHub\HouseRankerV2\houseranker2\functions" for Cloud Functions... {"metadata":{"emulator":{"name":"functions"},"message":"Watching \"C:\\Users\\Joesey\\Documents\\GitHub\\HouseRankerV2\\houseranker2\\functions\" for Cloud Functions..."}}
+[debug] [2025-01-20T20:31:28.402Z] Validating nodejs source
+[warn] !  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory. 
+[debug] [2025-01-20T20:31:30.016Z] > [functions] package.json contents: {
+  "name": "functions",
+  "description": "Cloud Functions for Firebase",
+  "scripts": {
+    "lint": "eslint .",
+    "serve": "firebase emulators:start --only functions",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "18"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "@googlemaps/google-maps-services-js": "^3.4.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^6.0.1",
+    "stripe": "^17.4.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.15.0",
+    "eslint-config-google": "^0.14.0",
+    "firebase-functions-test": "^3.1.0"
+  },
+  "private": true
+}
+[debug] [2025-01-20T20:31:30.016Z] Building nodejs source
+[debug] [2025-01-20T20:31:30.017Z] Failed to find version of module node: reached end of search path C:\Users\Joesey\Documents\GitHub\HouseRankerV2\houseranker2\functions\node_modules
+[info] +  functions: Using node@18 from host. 
+[info] i  functions: Loaded environment variables from .env. 
+[debug] [2025-01-20T20:31:30.020Z] Could not find functions.yaml. Must use http discovery
+[debug] [2025-01-20T20:31:30.027Z] Found firebase-functions binary at 'C:\Users\Joesey\Documents\GitHub\HouseRankerV2\houseranker2\functions\node_modules\.bin\firebase-functions'
+[info] Serving at port 8030
+
+[debug] [2025-01-20T20:31:30.621Z] Got response from /__/functions.yaml {"endpoints":{"verifyRecaptcha":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"callableTrigger":{},"entryPoint":"verifyRecaptcha"},"myfunction":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"eventTrigger":{"eventType":"google.cloud.firestore.document.v1.written","eventFilters":{"database":"(default)","namespace":"(default)"},"eventFilterPathPatterns":{"document":"users_entries/{userId}/entries/{entryId}"},"retry":false},"entryPoint":"myfunction"},"calculateDistance":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"callableTrigger":{},"entryPoint":"calculateDistance"},"createPaymentIntent":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"httpsTrigger":{},"entryPoint":"createPaymentIntent"},"handleStripeWebhook":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"httpsTrigger":{},"entryPoint":"handleStripeWebhook"}},"specVersion":"v1alpha1","requiredAPIs":[],"extensions":{}}
+[debug] [2025-01-20T20:31:30.645Z] defaultcredentials: writing to file C:\Users\Joesey\AppData\Roaming\firebase\inf6joesey2_hotmail_com_application_default_credentials.json
+[debug] [2025-01-20T20:31:30.646Z] Setting GAC to C:\Users\Joesey\AppData\Roaming\firebase\inf6joesey2_hotmail_com_application_default_credentials.json {"metadata":{"emulator":{"name":"functions"},"message":"Setting GAC to C:\\Users\\Joesey\\AppData\\Roaming\\firebase\\inf6joesey2_hotmail_com_application_default_credentials.json"}}
+[info] +  functions: Loaded functions definitions from source: verifyRecaptcha, myfunction, calculateDistance, createPaymentIntent, handleStripeWebhook. {"metadata":{"emulator":{"name":"functions"},"message":"Loaded functions definitions from source: verifyRecaptcha, myfunction, calculateDistance, createPaymentIntent, handleStripeWebhook."}}
+[info] +  functions[us-central1-verifyRecaptcha]: http function initialized (http://127.0.0.1:5001/housepickerv2/us-central1/verifyRecaptcha). {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mhttp\u001b[22m function initialized (http://127.0.0.1:5001/housepickerv2/us-central1/verifyRecaptcha)."}}
+[debug] [2025-01-20T20:31:30.649Z] Found a v2 firestore trigger.
+[debug] [2025-01-20T20:31:30.649Z] addFirestoreTrigger "{\"eventType\":\"google.cloud.firestore.document.v1.written\",\"database\":\"(default)\",\"namespace\":\"(default)\",\"document\":{\"value\":\"users_entries/{userId}/entries/{entryId}\",\"matchType\":\"PATH_PATTERN\"}}"
+[debug] [2025-01-20T20:31:30.649Z] >>> [apiv2][query] POST http://127.0.0.1:8080/emulator/v1/projects/housepickerv2/eventarcTrigger?eventarcTriggerId=us-central1-myfunction-0 [none]
+[debug] [2025-01-20T20:31:30.650Z] >>> [apiv2][body] POST http://127.0.0.1:8080/emulator/v1/projects/housepickerv2/eventarcTrigger?eventarcTriggerId=us-central1-myfunction-0 "{\"eventType\":\"google.cloud.firestore.document.v1.written\",\"database\":\"(default)\",\"namespace\":\"(default)\",\"document\":{\"value\":\"users_entries/{userId}/entries/{entryId}\",\"matchType\":\"PATH_PATTERN\"}}"
+[debug] [2025-01-20T20:31:31.194Z] <<< [apiv2][status] POST http://127.0.0.1:8080/emulator/v1/projects/housepickerv2/eventarcTrigger?eventarcTriggerId=us-central1-myfunction-0 200
+[debug] [2025-01-20T20:31:31.194Z] <<< [apiv2][body] POST http://127.0.0.1:8080/emulator/v1/projects/housepickerv2/eventarcTrigger?eventarcTriggerId=us-central1-myfunction-0 {"eventType":"google.cloud.firestore.document.v1.written","database":"(default)","namespace":"(default)","document":{"value":"users_entries/{userId}/entries/{entryId}","matchType":"PATH_PATTERN"}}
+[info] +  functions[us-central1-myfunction]: firestore function initialized. {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mfirestore\u001b[22m function initialized."}}
+[info] +  functions[us-central1-calculateDistance]: http function initialized (http://127.0.0.1:5001/housepickerv2/us-central1/calculateDistance). {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mhttp\u001b[22m function initialized (http://127.0.0.1:5001/housepickerv2/us-central1/calculateDistance)."}}
+[info] +  functions[us-central1-createPaymentIntent]: http function initialized (http://127.0.0.1:5001/housepickerv2/us-central1/createPaymentIntent). {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mhttp\u001b[22m function initialized (http://127.0.0.1:5001/housepickerv2/us-central1/createPaymentIntent)."}}
+[info] +  functions[us-central1-handleStripeWebhook]: http function initialized (http://127.0.0.1:5001/housepickerv2/us-central1/handleStripeWebhook). {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mhttp\u001b[22m function initialized (http://127.0.0.1:5001/housepickerv2/us-central1/handleStripeWebhook)."}}
+[debug] [2025-01-20T20:31:31.202Z] Could not find VSCode notification endpoint: FetchError: request to http://localhost:40001/vscode/notify failed, reason: connect ECONNREFUSED ::1:40001. If you are not running the Firebase Data Connect VSCode extension, this is expected and not an issue.
+[info] 
+┌─────────────────────────────────────────────────────────────┐
+│ ✔  All emulators ready! It is now safe to connect your app. │
+│ i  View Emulator UI at http://127.0.0.1:4000/               │
+└─────────────────────────────────────────────────────────────┘
+
+┌────────────────┬────────────────┬──────────────────────────────────┐
+│ Emulator       │ Host:Port      │ View in Emulator UI              │
+├────────────────┼────────────────┼──────────────────────────────────┤
+│ Authentication │ 127.0.0.1:9099 │ http://127.0.0.1:4000/auth       │
+├────────────────┼────────────────┼──────────────────────────────────┤
+│ Functions      │ 127.0.0.1:5001 │ http://127.0.0.1:4000/functions  │
+├────────────────┼────────────────┼──────────────────────────────────┤
+│ Firestore      │ 127.0.0.1:8080 │ http://127.0.0.1:4000/firestore  │
+├────────────────┼────────────────┼──────────────────────────────────┤
+│ Hosting        │ 127.0.0.1:5000 │ n/a                              │
+├────────────────┼────────────────┼──────────────────────────────────┤
+│ Extensions     │ 127.0.0.1:5001 │ http://127.0.0.1:4000/extensions │
+└────────────────┴────────────────┴──────────────────────────────────┘
+  Emulator Hub running at 127.0.0.1:4400
+  Other reserved ports: 4500, 9150
+┌─────────────────────────┬───────────────┬─────────────────────┐
+│ Extension Instance Name │ Extension Ref │ View in Emulator UI │
+└─────────────────────────┴───────────────┴─────────────────────┘
+Issues? Report them at https://github.com/firebase/firebase-tools/issues and attach the *-debug.log files.
+ 
+[debug] [2025-01-20T20:45:54.977Z] File C:\Users\Joesey\Documents\GitHub\HouseRankerV2\houseranker2\functions\index.js changed, reloading triggers {"metadata":{"emulator":{"name":"functions"},"message":"File C:\\Users\\Joesey\\Documents\\GitHub\\HouseRankerV2\\houseranker2\\functions\\index.js changed, reloading triggers"}}
+[debug] [2025-01-20T20:45:55.989Z] Validating nodejs source
+[warn] !  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory. 
+[debug] [2025-01-20T20:45:58.382Z] > [functions] package.json contents: {
+  "name": "functions",
+  "description": "Cloud Functions for Firebase",
+  "scripts": {
+    "lint": "eslint .",
+    "serve": "firebase emulators:start --only functions",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "18"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "@googlemaps/google-maps-services-js": "^3.4.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^6.0.1",
+    "stripe": "^17.4.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.15.0",
+    "eslint-config-google": "^0.14.0",
+    "firebase-functions-test": "^3.1.0"
+  },
+  "private": true
+}
+[debug] [2025-01-20T20:45:58.383Z] Building nodejs source
+[debug] [2025-01-20T20:45:58.383Z] Failed to find version of module node: reached end of search path C:\Users\Joesey\Documents\GitHub\HouseRankerV2\houseranker2\functions\node_modules
+[info] +  functions: Using node@18 from host. 
+[info] i  functions: Loaded environment variables from .env. 
+[debug] [2025-01-20T20:45:58.385Z] Could not find functions.yaml. Must use http discovery
+[debug] [2025-01-20T20:45:58.393Z] Found firebase-functions binary at 'C:\Users\Joesey\Documents\GitHub\HouseRankerV2\houseranker2\functions\node_modules\.bin\firebase-functions'
+[info] Serving at port 8209
+
+[debug] [2025-01-20T20:45:58.991Z] Got response from /__/functions.yaml {"endpoints":{"verifyRecaptcha":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"callableTrigger":{},"entryPoint":"verifyRecaptcha"},"myfunction":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"eventTrigger":{"eventType":"google.cloud.firestore.document.v1.written","eventFilters":{"database":"(default)","namespace":"(default)"},"eventFilterPathPatterns":{"document":"users_entries/{userId}/entries/{entryId}"},"retry":false},"entryPoint":"myfunction"},"calculateDistance":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"callableTrigger":{},"entryPoint":"calculateDistance"},"createPaymentIntent":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"httpsTrigger":{},"entryPoint":"createPaymentIntent"},"handleStripeWebhook":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"httpsTrigger":{},"entryPoint":"handleStripeWebhook"}},"specVersion":"v1alpha1","requiredAPIs":[],"extensions":{}}
+[debug] [2025-01-20T20:45:59.006Z] defaultcredentials: writing to file C:\Users\Joesey\AppData\Roaming\firebase\inf6joesey2_hotmail_com_application_default_credentials.json
+[debug] [2025-01-20T20:45:59.007Z] Setting GAC to C:\Users\Joesey\AppData\Roaming\firebase\inf6joesey2_hotmail_com_application_default_credentials.json {"metadata":{"emulator":{"name":"functions"},"message":"Setting GAC to C:\\Users\\Joesey\\AppData\\Roaming\\firebase\\inf6joesey2_hotmail_com_application_default_credentials.json"}}
+[info] +  functions: Loaded functions definitions from source: verifyRecaptcha, myfunction, calculateDistance, createPaymentIntent, handleStripeWebhook. {"metadata":{"emulator":{"name":"functions"},"message":"Loaded functions definitions from source: verifyRecaptcha, myfunction, calculateDistance, createPaymentIntent, handleStripeWebhook."}}
+[debug] [2025-01-20T20:46:34.436Z] File C:\Users\Joesey\Documents\GitHub\HouseRankerV2\houseranker2\functions\index.js changed, reloading triggers {"metadata":{"emulator":{"name":"functions"},"message":"File C:\\Users\\Joesey\\Documents\\GitHub\\HouseRankerV2\\houseranker2\\functions\\index.js changed, reloading triggers"}}
+[debug] [2025-01-20T20:46:35.438Z] Validating nodejs source
+[warn] !  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory. 
+[debug] [2025-01-20T20:46:36.558Z] > [functions] package.json contents: {
+  "name": "functions",
+  "description": "Cloud Functions for Firebase",
+  "scripts": {
+    "lint": "eslint .",
+    "serve": "firebase emulators:start --only functions",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "18"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "@googlemaps/google-maps-services-js": "^3.4.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^6.0.1",
+    "stripe": "^17.4.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.15.0",
+    "eslint-config-google": "^0.14.0",
+    "firebase-functions-test": "^3.1.0"
+  },
+  "private": true
+}
+[debug] [2025-01-20T20:46:36.558Z] Building nodejs source
+[debug] [2025-01-20T20:46:36.558Z] Failed to find version of module node: reached end of search path C:\Users\Joesey\Documents\GitHub\HouseRankerV2\houseranker2\functions\node_modules
+[info] +  functions: Using node@18 from host. 
+[info] i  functions: Loaded environment variables from .env. 
+[debug] [2025-01-20T20:46:36.561Z] Could not find functions.yaml. Must use http discovery
+[debug] [2025-01-20T20:46:36.569Z] Found firebase-functions binary at 'C:\Users\Joesey\Documents\GitHub\HouseRankerV2\houseranker2\functions\node_modules\.bin\firebase-functions'
+[info] Serving at port 8657
+
+[debug] [2025-01-20T20:46:37.172Z] Got response from /__/functions.yaml {"endpoints":{"verifyRecaptcha":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"callableTrigger":{},"entryPoint":"verifyRecaptcha"},"myfunction":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"eventTrigger":{"eventType":"google.cloud.firestore.document.v1.written","eventFilters":{"database":"(default)","namespace":"(default)"},"eventFilterPathPatterns":{"document":"users_entries/{userId}/entries/{entryId}"},"retry":false},"entryPoint":"myfunction"},"calculateDistance":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"callableTrigger":{},"entryPoint":"calculateDistance"},"createPaymentIntent":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"httpsTrigger":{},"entryPoint":"createPaymentIntent"},"handleStripeWebhook":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"httpsTrigger":{},"entryPoint":"handleStripeWebhook"}},"specVersion":"v1alpha1","requiredAPIs":[],"extensions":{}}
+[debug] [2025-01-20T20:46:37.187Z] defaultcredentials: writing to file C:\Users\Joesey\AppData\Roaming\firebase\inf6joesey2_hotmail_com_application_default_credentials.json
+[debug] [2025-01-20T20:46:37.187Z] Setting GAC to C:\Users\Joesey\AppData\Roaming\firebase\inf6joesey2_hotmail_com_application_default_credentials.json {"metadata":{"emulator":{"name":"functions"},"message":"Setting GAC to C:\\Users\\Joesey\\AppData\\Roaming\\firebase\\inf6joesey2_hotmail_com_application_default_credentials.json"}}
+[info] +  functions: Loaded functions definitions from source: verifyRecaptcha, myfunction, calculateDistance, createPaymentIntent, handleStripeWebhook. {"metadata":{"emulator":{"name":"functions"},"message":"Loaded functions definitions from source: verifyRecaptcha, myfunction, calculateDistance, createPaymentIntent, handleStripeWebhook."}}
