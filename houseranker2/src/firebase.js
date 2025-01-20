@@ -3,7 +3,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, connectAuthEmulator, GoogleAuthProvider, signInWithPopup, FacebookAuthProvider } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
-import { getFunctions, httpsCallable } from "firebase/functions";
+import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/functions";
 
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
@@ -32,7 +32,7 @@ if (  process.env.NODE_ENV === "development" )
 {
   try {
     console.log("Connecting to Firebase emulators...");
-    functions.useEmulator("localhost", 5001); // Replace 5001 with the correct emulator port
+    connectFunctionsEmulator(functions, "localhost", 5001);
     connectFirestoreEmulator(db, "127.0.0.1", 8080);
     connectAuthEmulator(auth, "http://127.0.0.1:9099");
   } catch (e) {

@@ -32,13 +32,22 @@ const LoginPage = () => {
       const recaptchaResult = await verifyRecaptcha({ token });
   
       if (recaptchaResult.data.success) {
-        // Proceed with Google Sign-In
-        const result = await signInWithPopup(auth, googleProvider);
-        const user = result.user;
+        try {
+          // Proceed with Google Sign-In
+          const result = await signInWithPopup(auth, googleProvider);
+          const user = result.user;
   
-        // Create user data if not already created
-        createUserData(user);
-        console.log("User info:", user);
+          // Create user data if not already created
+          createUserData(user);
+          console.log("User info:", user);
+        } catch (error) {
+          if (error.code === "auth/popup-closed-by-user") {
+            alert("The sign-in popup was closed. Please try again.");
+          } else {
+            console.error("Error during Google sign-in:", error);
+            alert("Something went wrong during login.");
+          }
+        }
       } else {
         alert("reCAPTCHA verification failed. Please try again.");
       }

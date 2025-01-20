@@ -25,9 +25,7 @@ const SECRET_KEY = '6Lfxwb0qAAAAAHd3ehvXMrVuuHvavGu0yp1UWO3b'; // Replace with y
 
 // Firebase Function to verify reCAPTCHA token
 exports.verifyRecaptcha = functions.https.onCall(async (data, context) => {
-  console.log("aaaaaaaaaaaaaaaa")
-  const token = data.token; // Token sent from the frontend
-
+  const token = data.data.token; // Token sent from the frontend
   if (!token) {
     throw new functions.https.HttpsError('invalid-argument', 'reCAPTCHA token is required.');
   }
