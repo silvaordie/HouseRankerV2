@@ -43,8 +43,9 @@
 }
 
 .selected-card {
-  border-color: #00b300;
-  background-color: #e6ffe6;
+  border-color: black;
+  background-color: black;
+  color: white;
 }
 
 .card-content {

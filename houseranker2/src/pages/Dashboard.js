@@ -23,6 +23,9 @@ import LinkIcon from '@mui/icons-material/Link';
 import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/functions";
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import ButtonSelector from '../components/ButtonSelector';
+import { performance } from '../firebase';
+import { trace } from "firebase/performance";
+import { useCaptchaVerification } from '../components/verifyCaptcha';
 
 const Dashboard = () => {
   // const useStateWithCache = (key, defaultValue) => {
@@ -69,6 +72,15 @@ const Dashboard = () => {
   const [outOfTokens, setOutOfTokens] = useState(false);
   const [sortConfig, setSortConfig] = React.useState({ key: "Score", direction: 'dsc' });
   const [isDataLoaded, setIsDataLoaded] = useState(false);  // New state to track the first load
+  const captchaVerified = useCaptchaVerification();
+
+  useEffect(() => {
+    if (!captchaVerified) {
+      // If the CAPTCHA is not verified, you might want to display a loading indicator
+      // or something that tells the user that CAPTCHA is being validated.
+      console.log('Verifying CAPTCHA...');
+    }
+  }, [captchaVerified]);
 
   /*const updateUserData = async () => {
     if (currentUser && (!sliderValues || !userMaxs || !userStats)) { // Ensure currentUser is defined
@@ -87,7 +99,7 @@ const Dashboard = () => {
   };*/
 
   useEffect(() => {
-    if (!entries || Object.keys(entries).length === 0) return;
+    if (!entries || Object.keys(entries).length === 0 || !captchaVerified) return;
     const calculateScores = () => {
       const updatedScores = { ...scores };
       Object.entries(entries).forEach(([entryId, entry]) => {
@@ -125,7 +137,7 @@ const Dashboard = () => {
     };
     calculateScores();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entries, sliderValues, userMaxs, userStats, pointsOfInterest, distances]);
+  }, [entries, sliderValues, userMaxs, userStats, pointsOfInterest, distances, captchaVerified]);
 
 
   const processedPairs = useRef(new Set());
@@ -185,9 +197,12 @@ const Dashboard = () => {
     }
   }
   const fetchData = async () => {
-    if (currentUser) {
+    if (currentUser && captchaVerified) {
+      const fetchDataTrace = trace(performance, "FetchDataTrace");
       try {
         console.log("Fetching data")
+        fetchDataTrace.start();
+
         const userRef = doc(db, "users", currentUser.uid);
         const udoc = await getDoc(userRef);
         setUserData(udoc.data());
@@ -233,23 +248,25 @@ const Dashboard = () => {
         setPointsOfInterest(pointsOfInterestJson || {});
       } catch (error) {
         console.error("Error fetching user data:", error.message);
+        fetchDataTrace.stop();
       } finally {
-        loadDistances()
+        await loadDistances()
+        fetchDataTrace.stop();
       }
     };
   }
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [captchaVerified, currentUser]);
   useEffect(() => {
     // Trigger loadDistances() only after entries and pointsOfInterest have been set for the first time
-    if (!isDataLoaded && Object.keys(entries).length > 0 && Object.keys(pointsOfInterest).length > 0) {
+    if (!isDataLoaded && Object.keys(entries).length > 0 && Object.keys(pointsOfInterest).length > 0 && captchaVerified && currentUser) {
       loadDistances();
       setIsDataLoaded(true);  // Set the flag to true so it doesn't run again
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entries, pointsOfInterest, isDataLoaded]);
+  }, [currentUser, captchaVerified, entries, pointsOfInterest, isDataLoaded]);
 
   const saveUserData = async (updatedData) => {
     if (currentUser) {
@@ -722,6 +739,10 @@ const Dashboard = () => {
 
   const colors = ["#db284e", "#db284e", "#db8829", "#c9db29", "#4caf50", "#007bff"]
   const icons = { "walking": "person-walking", "transport": "train", "car": "car" }
+  if (!captchaVerified) {
+    // You can show a loading screen or a message here while CAPTCHA is being verified
+    return <div>Verifying CAPTCHA...</div>;
+  }
   return (
     <div className="dashboard-container">
       <ToolbarLayout userData={userData} db={db} />

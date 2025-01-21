@@ -4,6 +4,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth, connectAuthEmulator, GoogleAuthProvider, signInWithPopup, FacebookAuthProvider } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/functions";
+import { getPerformance } from "firebase/performance";
 
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
@@ -27,6 +28,7 @@ const db = getFirestore(app); // Initialize Firestore and export it
 const googleProvider = new GoogleAuthProvider();
 const facebookProvider = new FacebookAuthProvider();
 const functions = getFunctions(app);
+const performance = getPerformance(app);
 
 if (  process.env.NODE_ENV === "development" ) 
 {
@@ -35,9 +37,10 @@ if (  process.env.NODE_ENV === "development" )
     connectFunctionsEmulator(functions, "localhost", 5001);
     connectFirestoreEmulator(db, "127.0.0.1", 8080);
     connectAuthEmulator(auth, "http://127.0.0.1:9099");
+    localStorage.setItem('firebase_performance_debug', true);
   } catch (e) {
     console.error("Failed to connect to Firebase emulators:", e);
   }
 }
 
-export { httpsCallable, functions, db, auth, app, googleProvider, facebookProvider, signInWithPopup };
+export { performance, httpsCallable, functions, db, auth, app, googleProvider, facebookProvider, signInWithPopup };

@@ -5,6 +5,7 @@ import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { useSearchParams } from "react-router-dom";
 import "./SelectPlan.css"; // Import the CSS file
+import { useCaptchaVerification } from "../components/verifyCaptcha";
 
 if (process.env.REACT_APP_STRIPE_PUBLIC_KEY === undefined) {
   throw new Error("REACT_APP_STRIPE_PUBLIC_KEY is not defined");
@@ -14,6 +15,7 @@ function SelectPlan() {
   const [selectedPlan, setSelectedPlan] = useState("2-tier");
   const [searchParams] = useSearchParams();
   const [paymentStatus, setPaymentStatus] = useState(null);
+  const captchaVerified = useCaptchaVerification();
 
   useEffect(() => {
     const redirectStatus = searchParams.get("redirect_status"); // 'succeeded' or 'failed'
@@ -22,6 +24,18 @@ function SelectPlan() {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    if (!captchaVerified) {
+      // If the CAPTCHA is not verified, you might want to display a loading indicator
+      // or something that tells the user that CAPTCHA is being validated.
+      console.log('Verifying CAPTCHA...');
+    }
+  }, [captchaVerified]);
+
+  if (!captchaVerified) {
+    // You can show a loading screen or a message here while CAPTCHA is being verified
+    return <div>Verifying CAPTCHA...</div>;
+  }
 
   const prices = { "1-tier": 7.5, "2-tier": 15.5, "3-tier": 20.5 }
   const plans = [
@@ -86,16 +100,16 @@ function SelectPlan() {
 
       {/* Right Side: CheckoutPage */}
       <div className="right-panel">
-          <Elements
-            stripe={stripePromise}
-            options={{
-              mode: "payment",
-              amount: prices[selectedPlan] * 100,
-              currency: "chf",
-            }}
-          >
-            <CheckoutPage amount={prices[selectedPlan] * 100} />
-          </Elements>
+        <Elements
+          stripe={stripePromise}
+          options={{
+            mode: "payment",
+            amount: prices[selectedPlan] * 100,
+            currency: "chf",
+          }}
+        >
+          <CheckoutPage amount={prices[selectedPlan] * 100} />
+        </Elements>
       </div>
     </div>
   );

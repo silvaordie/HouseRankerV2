@@ -1,71 +1,53 @@
 import "../App.css"; // Ensure this file contains the new styles for the landing page
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { signInWithPopup } from "firebase/auth";
 import { functions, httpsCallable, auth, db, googleProvider, facebookProvider } from "../firebase";
 import { setDoc, doc, getDoc } from "firebase/firestore";
-import ReCAPTCHA from "react-google-recaptcha"; // Import reCAPTCHA
+import { useCaptchaVerification } from "../components/verifyCaptcha";
 
 const LoginPage = () => {
-  const [captchaVerified, setCaptchaVerified] = useState(false); // To track if CAPTCHA is verified
-  const recaptchaRef = useRef(null); // Reference to reCAPTCHA
   const [loading, setLoading] = useState(false); // To manage loading state
+  const captchaVerified = useCaptchaVerification();
 
+  useEffect(() => {
+    if (!captchaVerified) {
+      // If the CAPTCHA is not verified, you might want to display a loading indicator
+      // or something that tells the user that CAPTCHA is being validated.
+      console.log('Verifying CAPTCHA...');
+    }
+  }, [captchaVerified]);
+
+  if (!captchaVerified) {
+    // You can show a loading screen or a message here while CAPTCHA is being verified
+    return <div>Verifying CAPTCHA...</div>;
+  }
   // Handle Google Sign-In
   const handleGoogleSignIn = async () => {
     try {
       setLoading(true);
-  
-      // Trigger invisible reCAPTCHA challenge when user attempts to login
-      const token = await recaptchaRef.current.executeAsync(); // This triggers the reCAPTCHA and returns the token
-  
-      // Reset the CAPTCHA widget after token retrieval
-      recaptchaRef.current.reset();
-  
-      // Check if token exists, otherwise alert the user to complete CAPTCHA
-      if (!token) {
-        alert("Please complete the CAPTCHA.");
-        return;
-      }
-  
-      // Call Firebase Function to verify the reCAPTCHA token
-      const verifyRecaptcha = httpsCallable(functions, "verifyRecaptcha");
-      const recaptchaResult = await verifyRecaptcha({ token });
-  
-      if (recaptchaResult.data.success) {
-        try {
-          // Proceed with Google Sign-In
-          const result = await signInWithPopup(auth, googleProvider);
-          const user = result.user;
-  
-          // Create user data if not already created
-          createUserData(user);
-          console.log("User info:", user);
-        } catch (error) {
-          if (error.code === "auth/popup-closed-by-user") {
-            alert("The sign-in popup was closed. Please try again.");
-          } else {
-            console.error("Error during Google sign-in:", error);
-            alert("Something went wrong during login.");
-          }
+
+      try {
+        // Proceed with Google Sign-In
+        const result = await signInWithPopup(auth, googleProvider);
+        const user = result.user;
+
+        // Create user data if not already created
+        createUserData(user);
+        console.log("User info:", user);
+      } catch (error) {
+        if (error.code === "auth/popup-closed-by-user") {
+          alert("The sign-in popup was closed. Please try again.");
+        } else {
+          console.error("Error during Google sign-in:", error);
+          alert("Something went wrong during login.");
         }
-      } else {
-        alert("reCAPTCHA verification failed. Please try again.");
       }
+
     } catch (error) {
       console.error("Error during Google sign-in:", error);
       alert("Something went wrong during login.");
     } finally {
       setLoading(false);
-    }
-  };
-  
-
-  // Handle reCAPTCHA validation
-  const handleCaptchaChange = (value) => {
-    if (value) {
-      setCaptchaVerified(true); // Set to true when CAPTCHA is solved
-    } else {
-      setCaptchaVerified(false); // Set to false if CAPTCHA is not solved
     }
   };
 
@@ -139,13 +121,6 @@ const LoginPage = () => {
             Login with Facebook
           </button>
         </div>
-        {/* Invisible reCAPTCHA */}
-        <ReCAPTCHA
-          sitekey="6Lfxwb0qAAAAABS6n7jJPd77-SP6m87t2Vc2_DXI" // Replace with your actual Site Key
-          size="invisible"
-          ref={recaptchaRef}
-          onChange={handleCaptchaChange}
-        />
       </div>
     </div>
   );
