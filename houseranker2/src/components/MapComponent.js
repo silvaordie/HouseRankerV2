@@ -4,6 +4,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
 import "leaflet.awesome-markers";
+import isEqual from "lodash/isEqual"; // Import lodash for deep comparison
 
 const CenterAndZoomUpdater = ({ pointsOfInterest, sortedEntries }) => {
   const map = useMap();
@@ -17,8 +18,8 @@ const CenterAndZoomUpdater = ({ pointsOfInterest, sortedEntries }) => {
       const prevSorted = prevDataRef.current.sortedEntries;
 
       return (
-        JSON.stringify(prevPoints) !== JSON.stringify(pointsOfInterest) ||
-        JSON.stringify(prevSorted) !== JSON.stringify(sortedEntries)
+        !isEqual(prevPoints, pointsOfInterest) ||
+        !isEqual(prevSorted, sortedEntries)
       );
     };
 
@@ -35,7 +36,7 @@ const CenterAndZoomUpdater = ({ pointsOfInterest, sortedEntries }) => {
 
     // Add sorted entries to bounds
     sortedEntries.forEach(([_, entry]) => {
-      if(entry && entry.geolocation)
+      if (entry && entry.geolocation)
         bounds.extend([entry.geolocation.lat, entry.geolocation.lon]);
     });
 
@@ -48,6 +49,7 @@ const CenterAndZoomUpdater = ({ pointsOfInterest, sortedEntries }) => {
 
   return null;
 };
+
 
 const MapComponent = ({ pointsOfInterest, sortedEntries }) => {
   const getCustomIcon = (color) => {
@@ -92,7 +94,7 @@ const MapComponent = ({ pointsOfInterest, sortedEntries }) => {
 
         {/* Render the top 4 custom-ranked markers */}
         {sortedEntries.slice(0, 4).map(([_, entry], index) => {
-          const colors = ["blue", "green", "yellow", "red"];
+          const colors = ["blue", "green", "orange", "red"];
           const iconColor = colors[index];
           if (entry.geolocation)
           {

@@ -10,6 +10,7 @@ const ButtonSelector = ({ title = "Coziness", value = 0, onChange }) => {
         } else {
             setActiveButton(0); // Default to 0 if invalid or undefined
         }
+        onChange({ target: { value: value } });
     }, [value]);
 
     const handleButtonClick = (buttonValue) => {

@@ -717,13 +717,13 @@ const Dashboard = () => {
       const updatedEntry = currentEntry;
       if (address) {
         updatedEntry.info.Address = address;
-
+        console.log(updatedEntry)
         setEntries((prevEntries) => ({
           ...prevEntries,
           [address]: {
             ...prevEntries[address], // Spread existing properties of the current entry
             info: updatedEntry.info, // Update the `info` section
-            geolocation: address ? updatedEntry.geolocation : geolocation
+            geolocation: updatedEntry.geolocation ?  updatedEntry.geolocation : geolocation 
           },
         }));
 

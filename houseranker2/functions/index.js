@@ -61,7 +61,7 @@ const recalculateMaxsAndStats = async (userId, field) => {
 
   entriesSnap.forEach((doc) => {
     const entry = doc.data();
-    if (entry[field] !== undefined) {
+    if (entry[field] !== undefined && field != "Coziness") {
       const convertedValue = entry[field] * maxConverter[field];
 
       // Update maximum
@@ -104,7 +104,7 @@ exports.myfunction = onDocumentWritten("users_entries/{userId}/entries/{entryId}
     return;
   }
   for (const [field, value] of Object.entries(data)) {
-    if ((!previousData || value !== previousData[field]) && (field !== "Address" && field !== "Link" && field !== "Description")) {
+    if ((!previousData || value !== previousData[field]) && (field !== "Address" && field !== "Link" && field !== "Description" && field !== "Coziness")) {
       if (!changed) {
         changed = true;
         userDocRef = db.collection("users_entries").doc(event.params.userId);

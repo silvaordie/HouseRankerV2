@@ -138,6 +138,8 @@ const createUserData = async (user) => {
     });
     await setDoc(doc(db, "users_entries", user.uid), {
       sliderValues: { Size: 0, Typology: 0, Price: 0, Coziness: 0 },
+      stats: { Size: 0, Typology: 0, Price: 0, Coziness: 5 },
+      maxs: { Size: 0, Typology: 0, Price: 0, Coziness: 0 },
     });
   }
 };
