@@ -1,7 +1,7 @@
 import "../App.css"; // Ensure this file contains the new styles for the landing page
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { signInWithPopup } from "firebase/auth";
-import { functions, httpsCallable, auth, db, googleProvider, facebookProvider } from "../firebase";
+import { auth, db, googleProvider, facebookProvider } from "../firebase";
 import { setDoc, doc, getDoc } from "firebase/firestore";
 import { useCaptchaVerification } from "../components/verifyCaptcha";
 
@@ -53,20 +53,25 @@ const LoginPage = () => {
 
   // Handle the Facebook Sign-in logic
   const handleFacebookSignIn = async () => {
-    if (!captchaVerified) {
-      alert("Please complete the CAPTCHA.");
-      return;
+    if (1) {
+      alert("Coming soon !")
     }
-    try {
-      setLoading(true); // Start loading indicator
-      const result = await signInWithPopup(auth, facebookProvider);
-      const user = result.user;
-      createUserData(user);
-      console.log("User info:", user);
-      setLoading(false); // Stop loading indicator
-    } catch (error) {
-      console.error("Error during Facebook sign-in:", error);
-      setLoading(false); // Stop loading indicator
+    else {
+      if (!captchaVerified) {
+        alert("Please complete the CAPTCHA.");
+        return;
+      }
+      try {
+        setLoading(true); // Start loading indicator
+        const result = await signInWithPopup(auth, facebookProvider);
+        const user = result.user;
+        createUserData(user);
+        console.log("User info:", user);
+        setLoading(false); // Stop loading indicator
+      } catch (error) {
+        console.error("Error during Facebook sign-in:", error);
+        setLoading(false); // Stop loading indicator
+      }
     }
   };
 

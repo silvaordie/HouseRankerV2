@@ -26,6 +26,7 @@ import ButtonSelector from '../components/ButtonSelector';
 import { performance } from '../firebase';
 import { trace } from "firebase/performance";
 import { useCaptchaVerification } from '../components/verifyCaptcha';
+import BugReportButton from '../components/BugReportButton';
 
 const Dashboard = () => {
   // const useStateWithCache = (key, defaultValue) => {
@@ -600,18 +601,22 @@ const Dashboard = () => {
           {/* Use Tooltip and LinkIcon */}
           <Tooltip title={entry.info.Link} arrow>
             <span>
+              {entry.info.Link?
               <a href={entry.info.Link} target="_blank" rel="noopener noreferrer">
                 <LinkIcon style={{ fontSize: '18px', cursor: 'pointer' }} />
               </a>
+              :
+              <Typography>-</Typography>
+              }
             </span>
           </Tooltip>
         </td>,
-        <td key="address">{entry.info.Address}</td>,
-        <td key="description">{entry.info.Description}</td>,
-        <td key="price">{entry.info.Price}</td>,
-        <td key="typology">{entry.info.Typology}</td>,
-        <td key="sqMeters">{entry.info.Size}</td>,
-        <td key="coziness">{entry.info.Coziness}</td>,
+        <td key="address">{entry.info.Address?entry.info.Address:"-"}</td>,
+        <td key="description">{entry.info.Description?entry.info.Description:"-"}</td>,
+        <td key="price">{entry.info.Price?entry.info.Price:"-"}</td>,
+        <td key="typology">{entry.info.Typology?entry.info.Typology:"-"}</td>,
+        <td key="sqMeters">{entry.info.Size?entry.info.Size:"-"}</td>,
+        <td key="coziness">{entry.info.Coziness?entry.info.Coziness:"0"}</td>,
       ];
 
       const interestPointDataCells = Object.entries(pointsOfInterest).map(([pointId, point], index) => [
@@ -983,11 +988,15 @@ const Dashboard = () => {
               />
             </div>
             <div style={{ marginLeft: '20px', textAlign: 'center' }}>
-              <Typography>Max</Typography>
+              <Typography>Max <Tooltip title="What's the maximum commute duration you would consider for each transport type, in minutes?" arrow>
+              <span style={{ cursor: 'pointer' }}>
+                <HelpOutlineIcon style={{ color: '#fff', backgroundColor: '#808080', borderRadius: '50%', padding: '0px', fontSize: '14px' }} />
+              </span>
+            </Tooltip></Typography>
               <input
                 type="number"
                 style={{ width: '60px' }}
-                value={maxs[0]}
+                value={pointsOfInterest[currentPoint]? pointsOfInterest[currentPoint].maxs["walking"] : 0}
                 placeholder="mins"
                 onChange={(e) => setMaxs(prevMaxs => ({
                   ...prevMaxs,
@@ -1013,7 +1022,7 @@ const Dashboard = () => {
             <input
               type="number"
               style={{ width: '60px', marginLeft: '20px' }}
-              value={maxs[1]}
+              value={pointsOfInterest[currentPoint]? pointsOfInterest[currentPoint].maxs["transport"] : 0}
               placeholder="mins"
               onChange={(e) => setMaxs(prevMaxs => ({
                 ...prevMaxs,
@@ -1037,7 +1046,7 @@ const Dashboard = () => {
             <input
               type="number"
               style={{ width: '60px', marginLeft: '20px' }}
-              value={maxs[2]}
+              value={pointsOfInterest[currentPoint]? pointsOfInterest[currentPoint].maxs["car"] : 0}
               placeholder="mins"
               onChange={(e) => setMaxs(prevMaxs => ({
                 ...prevMaxs,
@@ -1058,7 +1067,7 @@ const Dashboard = () => {
         </Box>
       </Modal>
 
-
+      <BugReportButton></BugReportButton>
 
     </div>
   );

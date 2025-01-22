@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import Typography from '@mui/material/Typography';
 import CheckoutPage from "./CheckoutPage";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
