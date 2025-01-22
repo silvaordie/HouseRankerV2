@@ -11,17 +11,17 @@ const { onDocumentUpdated, onDocumentWritten } = require("firebase-functions/v2/
 const admin = require("firebase-admin");
 const functions = require("firebase-functions")
 require("dotenv").config();
-const stripe = require("stripe")(String(process.env.STRIPE_SECRET_KEY));
-const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY
+const stripe = require("stripe")(String(process.env.STRIPE_SECRET_KEY_PROD));
+const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY_PROD
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET_PROD
 const axios = require('axios');
-const cors = require('cors')({ origin: true });
 
 // Initialize the Firebase Admin SDK
 admin.initializeApp();
 
 const db = admin.firestore();
 // Your secret key from Google reCAPTCHA
-const SECRET_KEY = '6Lfxwb0qAAAAAHd3ehvXMrVuuHvavGu0yp1UWO3b'; // Replace with your actual secret key from Google
+const CAPTCHA_SECRET_KEY = process.env.CAPTCHA_SECRET_KEY; // Replace with your actual secret key from Google
 
 // Firebase Function to verify reCAPTCHA token
 exports.verifyRecaptcha = functions.https.onCall(async (data, context) => {
@@ -34,7 +34,7 @@ exports.verifyRecaptcha = functions.https.onCall(async (data, context) => {
     // Send a request to Google reCAPTCHA verification endpoint
     const response = await axios.post('https://www.google.com/recaptcha/api/siteverify', null, {
       params: {
-        secret: SECRET_KEY,
+        secret: CAPTCHA_SECRET_KEY,
         response: token,
       },
     });
@@ -162,7 +162,7 @@ dummy_values = async (entryId, poiId) => {
 
 exports.calculateDistance = functions.https.onCall(async (data, context) => {
   const { entryId, poiId } = data.data;
-  if (1)
+  if (0)
     return dummy_values(entryId, poiId)
   else {
     try {
@@ -294,11 +294,10 @@ exports.createPaymentIntent = functions.https.onRequest(async (req, res) => {
 
 exports.handleStripeWebhook = functions.https.onRequest(async (req, res) => {
   const sig = req.headers["stripe-signature"];
-  const endpointSecret = "whsec_bd46jDBRQC0NKP5Au0cxJRQRaA54SK1A"; // Set this in your Stripe dashboard
   const tokens = { 2050: { "pointsOfInterest": 3, "entries": 25 }, 1550: { "pointsOfInterest": 3, "entries": 15 }, 750: { "pointsOfInterest": 0, "entries": 10 } };
   let event;
   try {
-    event = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
+    event = stripe.webhooks.constructEvent(req.rawBody, sig, STRIPE_WEBHOOK_SECRET);
   } catch (err) {
     console.error("Webhook error:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
