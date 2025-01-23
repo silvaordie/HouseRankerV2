@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { httpsCallable } from 'firebase/functions';  // Assuming you're using Firebase Functions
 import { functions } from '../firebase'; // Make sure this imports your Firebase config
-const GOOGLE_CAPTCHA_SITE_KEY_PROD = process.env.REACT_APP_GOOGLE_CAPTCHA_SITE_KEY_PROD;
+
+const GOOGLE_CAPTCHA_SITE_KEY_PROD = process.env.REACT_APP_ENV == "PROD" ? process.env.REACT_APP_GOOGLE_CAPTCHA_SITE_KEY_PROD:process.env.REACT_APP_GOOGLE_CAPTCHA_SITE_KEY
 // A utility function to check if the CAPTCHA has been completed and stored in sessionStorage
 const isCaptchaVerified = () => {
     const captchaVerified = sessionStorage.getItem('captchaVerified');
@@ -32,7 +33,6 @@ const verifyCaptchaToken = async (token) => {
 export const useCaptchaVerification = () => {
     const [captchaVerified, setCaptchaVerified] = useState(isCaptchaVerified()); // Initialize state based on session
     const grecaptcha = window.grecaptcha;  // Assuming you're using Google's reCAPTCHA
-    console.log("grecaptcha:", window.grecaptcha);
 
     useEffect(() => {
         if (!captchaVerified) {
@@ -40,8 +40,7 @@ export const useCaptchaVerification = () => {
             const executeCaptcha = async () => {
                 grecaptcha.ready(async () => {
                     try {
-                        console.log("Site Key:", GOOGLE_CAPTCHA_SITE_KEY_PROD);
-                        const token = await grecaptcha.execute("6LdV4L8qAAAAAFteRTJvwY1BgFR_PjmTeQNVrOvg", { action: 'login' });
+                        const token = await grecaptcha.execute(String(GOOGLE_CAPTCHA_SITE_KEY_PROD), { action: 'login' });
                         if (!window.grecaptcha || !window.grecaptcha.execute) {
                             console.error("reCAPTCHA is not loaded yet.");
                             alert("CAPTCHA script not ready. Please try again later.");

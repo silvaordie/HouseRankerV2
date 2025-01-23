@@ -7,15 +7,17 @@
  * See a full list of supported triggers at https://firebase.google.com/docs/functions
  */
 
-const { onDocumentUpdated, onDocumentWritten } = require("firebase-functions/v2/firestore");
+const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 const functions = require("firebase-functions")
-require("dotenv").config();
-const stripe = require("stripe")(String(process.env.STRIPE_SECRET_KEY_PROD));
-const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY
-const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET_PROD
 const axios = require('axios');
-const CAPTCHA_SECRET_KEY = process.env.CAPTCHA_SECRET_KEY_PROD; // Replace with your actual secret key from Google
+require("dotenv").config();
+const ENV = process.env.ENV
+
+const stripe = require("stripe")(ENV == "PROD" ? String(process.env.STRIPE_SECRET_KEY_PROD) : String(process.env.STRIPE_SECRET_KEY));
+const STRIPE_WEBHOOK_SECRET = ENV == "PROD" ? process.env.STRIPE_WEBHOOK_SECRET_PROD:process.env.STRIPE_WEBHOOK_SECRET
+const CAPTCHA_SECRET_KEY = ENV == "PROD" ? process.env.CAPTCHA_SECRET_KEY_PROD : process.env.CAPTCHA_SECRET_KEY
+const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY
 
 // Initialize the Firebase Admin SDK
 admin.initializeApp();

@@ -83,7 +83,7 @@ const LoginPage = () => {
           <span className="home-text">Home</span>Finder
         </h1>
         <p className="landing-paragraph">
-          Welcome to HomeFinder! Discover the best places, explore options, and find your next home with ease.
+          Welcome to HomeFinder! This is a tool designed to support your search for a new home, you simply tell us which houses you're interested and we'll tell you exactly which one is the perfect match for you. Not only do we take into consideration the house's characteristics, but also the places you go to on a daily basis. Minimizing time spent commutning back and forth!
         </p>
         {/* Bar with 3 items */}
         <div className="items-bar">
@@ -100,7 +100,7 @@ const LoginPage = () => {
           <div className="item">
             <i className="fas fa-heart item-icon"></i>
             <h3>Find the best</h3>
-            <p>We showcase you the best houses based on how important every detail regarding your next house is.</p>
+            <p>We rank your fidnings specifically according to your preferences, so youwaste no time comparing future homes.</p>
           </div>
         </div>
       </div>

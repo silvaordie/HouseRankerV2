@@ -426,20 +426,27 @@ const Dashboard = () => {
   };
   // Save point of interest
   const savePointOfInterest = () => {
-    let newPoint = { name, importance: poiSliders, maxs };
-    add_update_place("pointsOfInterest", address, newPoint);
-
-    if (currentPoint)
-      newPoint = { name, importance: poiSliders, maxs, geolocation: pointsOfInterest[currentPoint].geolocation };
+    if(address)
+    {
+      let newPoint = { name, importance: poiSliders, maxs };
+      add_update_place("pointsOfInterest", address, newPoint);
+  
+      if (currentPoint)
+        newPoint = { name, importance: poiSliders, maxs, geolocation: pointsOfInterest[currentPoint].geolocation };
+      else
+        newPoint = { name, importance: poiSliders, maxs, geolocation };
+  
+      let updatedPointsOfInterest = { ...pointsOfInterest };  // Create a new object
+      updatedPointsOfInterest[address] = newPoint;  // Edit existing point
+      setPointsOfInterest(updatedPointsOfInterest);  // Update state
+  
+      setIsNewPointOpen(false);
+      setName(null)
+      setAddress(null)
+      setCurrentPoint(null);
+    }
     else
-      newPoint = { name, importance: poiSliders, maxs, geolocation };
-
-    let updatedPointsOfInterest = { ...pointsOfInterest };  // Create a new object
-    updatedPointsOfInterest[address] = newPoint;  // Edit existing point
-    setPointsOfInterest(updatedPointsOfInterest);  // Update state
-
-    setIsNewPointOpen(false);
-    setCurrentPoint(null);
+      alert("Cannot create an Interest point without an Address !")
   };
 
   // Delete point of interest
@@ -993,7 +1000,7 @@ const Dashboard = () => {
               <input
                 type="number"
                 style={{ width: '60px' }}
-                value={pointsOfInterest[currentPoint]? pointsOfInterest[currentPoint].maxs["walking"] : 0}
+                value={pointsOfInterest[currentPoint]? pointsOfInterest[currentPoint].maxs["walking"] : maxs[0]}
                 placeholder="mins"
                 onChange={(e) => setMaxs(prevMaxs => ({
                   ...prevMaxs,
@@ -1019,7 +1026,7 @@ const Dashboard = () => {
             <input
               type="number"
               style={{ width: '60px', marginLeft: '20px' }}
-              value={pointsOfInterest[currentPoint]? pointsOfInterest[currentPoint].maxs["transport"] : 0}
+              value={pointsOfInterest[currentPoint]? pointsOfInterest[currentPoint].maxs["transport"] : maxs[1]}
               placeholder="mins"
               onChange={(e) => setMaxs(prevMaxs => ({
                 ...prevMaxs,
@@ -1043,7 +1050,7 @@ const Dashboard = () => {
             <input
               type="number"
               style={{ width: '60px', marginLeft: '20px' }}
-              value={pointsOfInterest[currentPoint]? pointsOfInterest[currentPoint].maxs["car"] : 0}
+              value={pointsOfInterest[currentPoint]? pointsOfInterest[currentPoint].maxs["car"] : maxs[2]}
               placeholder="mins"
               onChange={(e) => setMaxs(prevMaxs => ({
                 ...prevMaxs,

@@ -55,7 +55,7 @@ const CheckoutPage = (amount) => {
       elements,
       clientSecret,
       confirmParams: {
-        return_url: `https://housepickerv2.web.app/select-plan`,
+        return_url: process.env.REACT_APP_ENV == "PROD" ? `https://housepickerv2.web.app/select-plan` : `http://localhost:3000/select-plan`,
       },
     });
 

@@ -1,16 +1,32 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { TextField, InputAdornment, List, ListItem, ListItemButton, ListItemText, Paper, IconButton } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import axios from "axios";
+
 const AddressSearch = ({ label, value, disabled, onChange, disableInteraction }) => {
   const [query, setQuery] = useState(value || ""); // Initialize with the provided value
   const [suggestions, setSuggestions] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchTimeout, setSearchTimeout] = useState(null);
+  const wrapperRef = useRef(null); // Ref for detecting outside clicks
 
   useEffect(() => {
     setQuery(value || "");
   }, [value]);
+
+  // Effect to handle clicks outside the component
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setSuggestions([]); // Clear suggestions when clicking outside
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, []);
 
   const fetchSuggestions = async () => {
     if (!query) return;
@@ -41,9 +57,10 @@ const AddressSearch = ({ label, value, disabled, onChange, disableInteraction })
         };
       });
 
-      setSuggestions(formattedSuggestions); // Store the formatted results
+      setSuggestions(formattedSuggestions.length > 0 ? formattedSuggestions : [{ displayName: "No addresses found." }]);
     } catch (error) {
       console.error("Error fetching address suggestions:", error);
+      setSuggestions([{ displayName: "No addresses found." }]);
     } finally {
       setIsSearching(false);
     }
@@ -52,7 +69,6 @@ const AddressSearch = ({ label, value, disabled, onChange, disableInteraction })
   const handleChange = (e) => {
     const newQuery = e.target.value;
     setQuery(newQuery);
-    setSuggestions(["Searching..."]); // Show "Searching..." immediately while typing
     setIsSearching(true);
 
     // Debounce the search call (trigger after 2 seconds of inactivity)
@@ -63,7 +79,7 @@ const AddressSearch = ({ label, value, disabled, onChange, disableInteraction })
       setTimeout(() => {
         setIsSearching(false);
         fetchSuggestions();
-      }, 2000)
+      }, 700)
     );
 
     if (onChange) {
@@ -79,6 +95,10 @@ const AddressSearch = ({ label, value, disabled, onChange, disableInteraction })
   };
 
   const handleSuggestionClick = (suggestion) => {
+    if (suggestion.displayName === "No addresses found.") {
+      return; // Do nothing for "No addresses found."
+    }
+
     // Create simplified address string
     const simplifiedAddress = [
       suggestion.door ? suggestion.door : "",
@@ -105,7 +125,7 @@ const AddressSearch = ({ label, value, disabled, onChange, disableInteraction })
   };
 
   return (
-    <div style={{ position: "relative", width: "100%" }}>
+    <div style={{ position: "relative", width: "100%" }} ref={wrapperRef}>
       <TextField
         label={label}
         value={query}
@@ -131,20 +151,23 @@ const AddressSearch = ({ label, value, disabled, onChange, disableInteraction })
       {!disableInteraction && suggestions.length > 0 && (
         <Paper style={{ position: "absolute", top: "50px", left: 0, right: 0, zIndex: 10 }}>
           <List>
-
             {isSearching ? (
-              <ListItem disablePadding>
-                <ListItemText primary="Searching..." />
+              <ListItem>
+                <ListItemText primary="   Searching..." />
               </ListItem>
             ) : (
               suggestions.map((suggestion, index) => (
                 <ListItem key={index} disablePadding>
                   <ListItemButton
                     onClick={() => handleSuggestionClick(suggestion)}
-                    disabled={isSearching}
+                    disabled={isSearching || suggestion.displayName === "No addresses found."}
                   >
                     <ListItemText
-                      primary={`${suggestion.door ? suggestion.door + " " : ""}${suggestion.street || ""} ${suggestion.city || ""} ${suggestion.postalCode || ""} ${suggestion.country || ""}`}
+                      primary={
+                        suggestion.displayName === "No addresses found."
+                          ? "No addresses found."
+                          : `${suggestion.door ? suggestion.door + " " : ""}${suggestion.street || ""} ${suggestion.city || ""} ${suggestion.postalCode || ""} ${suggestion.country || ""}`
+                      }
                     />
                   </ListItemButton>
                 </ListItem>

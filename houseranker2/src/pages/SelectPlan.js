@@ -6,10 +6,12 @@ import { useSearchParams } from "react-router-dom";
 import "./SelectPlan.css"; // Import the CSS file
 import { useCaptchaVerification } from "../components/verifyCaptcha";
 
-if (process.env.REACT_APP_STRIPE_PUBLIC_KEY_PROD === undefined) {
-  throw new Error("REACT_APP_STRIPE_PUBLIC_KEY is not defined");
-}
-const stripePromise = loadStripe(String(process.env.REACT_APP_STRIPE_PUBLIC_KEY_PROD));
+const STRIPE_PUBLIC_KEY = process.env.REACT_APP_ENV == "PROD" ?  process.env.REACT_APP_STRIPE_PUBLIC_KEY_PROD : process.env.REACT_APP_STRIPE_PUBLIC_KEY
+
+if (STRIPE_PUBLIC_KEY == undefined)
+  throw new Error("Stripe public key is not defined");
+
+const stripePromise = loadStripe(String(STRIPE_PUBLIC_KEY));
 function SelectPlan() {
   const [selectedPlan, setSelectedPlan] = useState("2-tier");
   const [searchParams] = useSearchParams();
