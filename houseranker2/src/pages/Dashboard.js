@@ -20,7 +20,7 @@ import ToolbarLayout from '../components/ToolbarLayout';
 import { useNavigate } from "react-router-dom";
 import Tooltip from '@mui/material/Tooltip';
 import LinkIcon from '@mui/icons-material/Link';
-import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/functions";
+import { functions, httpsCallable } from '../firebase';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import ButtonSelector from '../components/ButtonSelector';
 import { performance } from '../firebase';
@@ -146,10 +146,7 @@ const Dashboard = () => {
 
   const getDistanceBetween = async (entryId, poiId) => {
     if (entryId) {
-      const functions = getFunctions();
-      connectFunctionsEmulator(functions, "localhost", 5001);
       const checkPoint = httpsCallable(functions, "calculateDistance");
-
       const result = await checkPoint({ entryId, poiId });
       // Update distances state with fetched result
       setDistances(prevDistances => ({

@@ -6,6 +6,7 @@ import {
 } from "@stripe/react-stripe-js";
 import { useAuth } from "../AuthContext";
 import "./SelectPlan.css"; // Import the CSS file
+import { functions, httpsCallable } from '../firebase';
 
 const CheckoutPage = (amount) => {
   const stripe = useStripe();
@@ -18,19 +19,22 @@ const CheckoutPage = (amount) => {
   useEffect(() => {
     if (currentUser) {
       const amount_value = amount.amount;
-      setClientSecret(null)
-      fetch("http://127.0.0.1:5001/housepickerv2/us-central1/createPaymentIntent", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ "amount": amount_value, "uid": currentUser.uid }),
+      setClientSecret(null);
+  
+      const createPaymentIntent = httpsCallable(functions, 'createPaymentIntent');
+  
+      createPaymentIntent({
+        amount: amount_value,
+        uid: currentUser.uid,
       })
-        .then((res) => res.json())
-        .then((data) => setClientSecret(data.clientSecret));
+        .then((result) => {
+          setClientSecret(result.data); // Set the client secret received from the callable function
+        })
+        .catch((error) => {
+          console.error('Error calling createPaymentIntent:', error);
+        });
     }
   }, [amount]);
-
   const handleSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
@@ -51,7 +55,7 @@ const CheckoutPage = (amount) => {
       elements,
       clientSecret,
       confirmParams: {
-        return_url: `http://localhost:3000/select-plan`,
+        return_url: `https://housepickerv2.web.app/select-plan`,
       },
     });
 
@@ -77,6 +81,12 @@ const CheckoutPage = (amount) => {
           <span className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]">
             Loading...
           </span>
+          <button
+            onClick={() => (window.location.href = "/dashboard")}
+            className="return-button"
+          >
+            Return to Dashboard
+          </button>
         </div>
       </div>
     );

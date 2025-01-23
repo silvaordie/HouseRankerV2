@@ -30,7 +30,7 @@ const facebookProvider = new FacebookAuthProvider();
 const functions = getFunctions(app);
 const performance = getPerformance(app);
 
-if (  process.env.NODE_ENV === "development" ) 
+if (0) 
 {
   try {
     console.log("Connecting to Firebase emulators...");
