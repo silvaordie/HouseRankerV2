@@ -1,0 +1,27 @@
+{
+    "manifest_version": 3,
+    "name": "Property Listing Scraper",
+    "version": "1.0",
+    "description": "Scrapes property listing details from supported websites",
+    "permissions": [
+        "activeTab",
+        "scripting"
+    ],
+    "action": {
+        "default_popup": "popup.html",
+        "default_title": "Property Scraper"
+    },
+    "background": {
+        "service_worker": "background.js"
+    },
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "scrapers/scraper-factory.js"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
+        }
+    ]
+}
