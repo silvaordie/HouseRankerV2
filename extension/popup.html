@@ -6,6 +6,8 @@
       width: 300px;
       padding: 15px;
       font-family: Arial, sans-serif;
+      background-color: var(--background-color);
+      color: var(--text-color);
     }
     .status {
       margin-bottom: 15px;
@@ -13,31 +15,134 @@
       border-radius: 4px;
     }
     .status.error {
-      background-color: #ffe6e6;
-      color: #cc0000;
+      background-color: var(--error-background-color);
+      color: var(--error-text-color);
     }
     .status.success {
-      background-color: #e6ffe6;
-      color: #006600;
+      background-color: var(--success-background-color);
+      color: var(--success-text-color);
     }
     button {
       width: 100%;
       padding: 10px;
-      background-color: #4CAF50;
-      color: white;
+      background-color: var(--button-background-color);
+      color: var(--button-text-color);
       border: none;
       border-radius: 4px;
       cursor: pointer;
     }
     button:disabled {
-      background-color: #cccccc;
+      background-color: var(--button-disabled-background-color);
       cursor: not-allowed;
+    }
+    .listing {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 10px;
+      background-color: var(--listing-background-color);
+      padding: 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .listing-header {
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+    .listing img {
+      width: 50px;
+      height: 50px;
+      margin-right: 10px;
+      border-radius: 4px;
+      object-fit: cover;
+    }
+    .listing-address {
+      flex-grow: 1;
+      margin-left: 10px;
+    }
+    .listing-details {
+      display: none;
+      width: 90%;
+      margin-top: 10px;
+      background-color: var(--details-background-color);
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .listing input[type="checkbox"] {
+      margin-right: 10px;
+    }
+
+    .selection-controls {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background-color: var(--background-color);
+      padding: 10px 0;
+      display: none;
+      gap: 10px;
+    }
+    .selection-controls button {
+      flex: 1;
+      padding: 5px;
+      font-size: 12px;
+    }
+    .export-controls {
+      position: sticky;
+      bottom: 0;
+      z-index: 100;
+      background-color: var(--background-color);
+      padding: 10px 0;
+      margin-top: 10px;
+    }
+    #listingsContainer {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    /* Light mode variables */
+    :root {
+      --background-color: #ffffff;
+      --text-color: #000000;
+      --error-background-color: #ffe6e6;
+      --error-text-color: #cc0000;
+      --success-background-color: #e6ffe6;
+      --success-text-color: #006600;
+      --button-background-color: #4CAF50;
+      --button-text-color: #ffffff;
+      --button-disabled-background-color: #cccccc;
+      --listing-background-color: #f9f9f9;
+      --details-background-color: #f1f1f1;
+    }
+
+    /* Dark mode variables */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --background-color: #121212;
+        --text-color: #ffffff;
+        --error-background-color: #4d0000;
+        --error-text-color: #ff6666;
+        --success-background-color: #003300;
+        --success-text-color: #66ff66;
+        --button-background-color: #4CAF50;
+        --button-text-color: #ffffff;
+        --button-disabled-background-color: #666666;
+        --listing-background-color: #1e1e1e;
+        --details-background-color: #2e2e2e;
+      }
     }
   </style>
 </head>
 <body>
   <div id="status" class="status"></div>
   <button id="scrapeButton" style="display: none;">Scrape Listings</button>
+  <div class="selection-controls" id="selectionControls">
+    <button id="selectAllBtn">Select All</button>
+    <button id="deselectAllBtn">Deselect All</button>
+  </div>
+  <div id="listingsContainer"></div>
+  <div class="export-controls">
+    <button id="exportBtn" style="display: none;">Export Selected Listings</button>
+  </div>
   <script src="scrapers/base-scraper.js"></script>
   <script src="scrapers/immo24-scraper.js"></script>
   <script src="scrapers/scraper-factory.js"></script>

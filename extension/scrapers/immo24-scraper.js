@@ -29,7 +29,10 @@ class Immoscout24Scraper extends BaseScraper {
                 const typologyElement = listing.querySelector('.HgListingRoomsLivingSpacePrice_roomsLivingSpacePrice_M6Ktp strong:not([title])');
                 const typologyRaw = typologyElement ? typologyElement.textContent.trim() : '0';
 
-                return this.formatListingData(id, address, priceRaw, sizeRaw, typologyRaw);
+                const imgElement = listing.querySelector('li[data-glide-index="0"] img');
+                const img = imgElement ? imgElement.src : '';
+
+                return this.formatListingData(id, address, img, priceRaw, sizeRaw, typologyRaw);
             });
 
             return { success: true, data: scrapedData };
