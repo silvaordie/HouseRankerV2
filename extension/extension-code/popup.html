@@ -168,6 +168,7 @@
   <script src="scrapers/scraper-factory.js"></script>
   <script src="scraper.js"></script>
   <script src="popup.js"></script>
+  <link rel="stylesheet" href="styles/loading-overlay.css">
 </head>
 <body>
   <div id="status" class="status"></div>
@@ -188,6 +189,15 @@
   <div id="listingsContainer"></div>
   <div class="export-controls">
     <button id="exportBtn" style="display: none;">Export Selected Listings</button>
+  </div>
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-content">
+      <div class="circular-progress">
+        <div class="progress-text">0%</div>
+      </div>
+      <div class="status-text">Exporting listings...</div>
+      <div class="warning-text">Please do not close or click away from the extension</div>
+    </div>
   </div>
 </body>
 </html>

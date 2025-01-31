@@ -16,6 +16,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     const facebookSignIn = document.getElementById('facebookSignIn');
     const signOutBtn = document.getElementById('signOutBtn');
 
+    // Add these variables to the top
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const progressText = loadingOverlay.querySelector('.progress-text');
+    const statusText = loadingOverlay.querySelector('.status-text');
+
+    // Prevent closing while exporting
+    window.onbeforeunload = (e) => {
+        if (loadingOverlay.style.display === 'flex') {
+            e.preventDefault();
+            e.returnValue = '';
+            return '';
+        }
+    };
+
     function toggleAllCheckboxes(checked) {
         const checkboxes = listingsContainer.querySelectorAll('input[type="checkbox"]');
         checkboxes.forEach(checkbox => checkbox.checked = checked);
@@ -38,9 +52,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             alert('Please select at least one listing to export');
             return;
         }
-        
+
+        // Show loading overlay
+        loadingOverlay.style.display = 'flex';
+        progressText.textContent = '0%';
         exportBtn.disabled = true;
-        exportBtn.textContent = 'Exporting...';
         
         try {
             const authState = await chrome.runtime.sendMessage({ type: 'GET_AUTH_STATE' });
@@ -48,21 +64,33 @@ document.addEventListener('DOMContentLoaded', async () => {
                 throw new Error('User not authenticated');
             }
 
-            for (const listing of listings) {
+            let successCount = 0;
+            for (const [index, listing] of listings.entries()) {
+                statusText.textContent = `Exporting listing ${index + 1} of ${listings.length}...`;
+                
                 const result = await chrome.runtime.sendMessage({
                     type: 'EXPORT_LISTING',
                     listing: listing,
                     userId: authState.user.uid
                 });
-                if (!result.success) {
+
+                if (result.success) {
+                    successCount++;
+                    const progress = Math.round((successCount / listings.length) * 100);
+                    // Update both text and visual progress
+                    progressText.textContent = `${progress}%`;
+                    document.querySelector('.circular-progress').style.setProperty('--progress', `${progress}%`);
+                } else {
                     throw new Error(`Failed to export listing: ${result.error}`);
                 }
             }
-            alert(`Successfully exported ${listings.length} listings!`);
+
+            alert(`Successfully exported ${successCount} listings!`);
         } catch (error) {
             console.error('Export error:', error);
             alert(`Export failed: ${error.message}`);
         } finally {
+            loadingOverlay.style.display = 'none';
             exportBtn.disabled = false;
             exportBtn.textContent = 'Export Selected Listings';
         }

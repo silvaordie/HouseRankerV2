@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, deleteDoc, setDoc, doc } from "firebase/firestore";
+import { collection, getDocs, deleteDoc, setDoc, doc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../firebase";
 import { useAuth } from "../../AuthContext";
 import Box from '@mui/material/Box';
@@ -89,9 +89,23 @@ const ImportOverlay = ({ onClose, userData, onImportComplete, onCreateManual }) 
         const entry = importedEntries.find(e => e.id === entryId);
         if (!entry) continue;
 
+        // Create the main entry document with basic info
         const newEntryRef = doc(collection(db, `users_entries/${currentUser.uid}/entries`), entryId);
-        await setDoc(newEntryRef, capitalizeKeys(entry));
+        await setDoc(newEntryRef, {
+          Address: entry.address,
+          Price: entry.price,
+          Size: entry.size,
+          Typology: entry.typology
+        });
         
+        // Create/Update the entry metadata in the entries collection
+        const entryMetadataRef = doc(db, 'entries', entry.address);
+        await setDoc(entryMetadataRef, {
+          createdAt: serverTimestamp(),
+          geolocation: entry.geolocation || null,
+        }, { merge: true });
+        
+        // Delete from imported entries
         const importedEntryRef = doc(db, `users_entries/${currentUser.uid}/imported_entries`, entryId);
         await deleteDoc(importedEntryRef);
       }
@@ -100,6 +114,20 @@ const ImportOverlay = ({ onClose, userData, onImportComplete, onCreateManual }) 
       onClose();
     } catch (error) {
       setError('Error importing entries: ' + error.message);
+    }
+  };
+
+  const handleRemoveEntries = async () => {
+    try {
+      for (const entryId of selectedEntries) {
+        const importedEntryRef = doc(db, `users_entries/${currentUser.uid}/imported_entries`, entryId);
+        await deleteDoc(importedEntryRef);
+      }
+      // Refresh the list after deletion
+      await fetchImportedEntries();
+      setSelectedEntries([]);
+    } catch (error) {
+      setError('Error removing entries: ' + error.message);
     }
   };
 
@@ -161,6 +189,17 @@ const ImportOverlay = ({ onClose, userData, onImportComplete, onCreateManual }) 
             )}
           </div>
           
+          <Button
+            variant="outlined"
+            color="error"
+            disabled={selectedEntries.length === 0}
+            onClick={handleRemoveEntries}
+            className="remove-button"
+            sx={{ mb: 1 }}
+          >
+            Remove ({selectedEntries.length}) entries
+          </Button>
+
           <Button
             variant="contained"
             color="primary"

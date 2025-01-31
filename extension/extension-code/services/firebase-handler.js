@@ -47,22 +47,22 @@ export async function signOut() {
     }
 }
 
+// Remove the getGeolocation function and modify exportListingToFirestore
 export async function exportListingToFirestore(listing, userId) {
     try {
         const sanitizedAddress = listing.address
-            .replace(/[\/\\.#$\[\]]/g, '_')
+            .replace(/[\/\\.#$\[\]]/g, '_');
 
         const importedRef = doc(db, 'users_entries', userId, 'imported_entries', sanitizedAddress);
         
         const listingData = {
-            id: listing.id,
             img: listing.img,
-            price: listing.price,
-            size: listing.size,
-            typology: listing.typology,
-            address: listing.address,
-            exportedAt: serverTimestamp(),
-            lastUpdated: serverTimestamp()
+            Price: listing.price,
+            Size: listing.size,
+            Typology: listing.typology,
+            Address: listing.address,
+            geolocation: listing.geolocation
+            // Geolocation will be added by background script
         };
         
         await setDoc(importedRef, listingData, { merge: true });

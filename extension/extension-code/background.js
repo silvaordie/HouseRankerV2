@@ -107,6 +107,36 @@ function logFromOffscreen(source, message, data = '') {
     console.log(`[${source}]`, message, data);
 }
 
+async function getGeolocation(address) {
+    try {
+        const encodedAddress = encodeURIComponent(address);
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}`);
+        const data = await response.json();
+        
+        if (data && data.length > 0) {
+            return {
+                lat: parseFloat(data[0].lat),
+                lon: parseFloat(data[0].lon),
+            };
+        }
+        return null;
+    } catch (error) {
+        console.error('Geolocation error:', error);
+        return null;
+    }
+}
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    // ...existing message handlers...
+    
+    if (message.type === 'GET_GEOLOCATION') {
+        getGeolocation(message.address)
+            .then(result => sendResponse(result))
+            .catch(error => sendResponse({ success: false, error: error.message }));
+        return true; // Will respond asynchronously
+    }
+});
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.type === 'DEBUG_LOG') {
         logFromOffscreen(request.source || 'Offscreen', request.message, request.data);
@@ -157,14 +187,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             return true;
         
         case 'EXPORT_LISTING':
-            chrome.storage.local.get(['user'], function(result) {
+            chrome.storage.local.get(['user'], async function(result) {
                 if (!result.user) {
                     sendResponse({ success: false, error: 'User not authenticated' });
                     return;
                 }
-                exportListingToFirestore(request.listing, result.user.uid)
-                    .then(result => sendResponse(result))
-                    .catch(error => sendResponse({ success: false, error: error.message }));
+                try {
+                    // Get geolocation data for one listing
+                    const geoData = await getGeolocation(request.listing.address);
+                    
+                    // Add geolocation to the listing
+                    const listingWithGeo = {
+                        ...request.listing,
+                        geolocation: geoData
+                    };
+                    
+                    // Export single listing to Firestore
+                    const exportResult = await exportListingToFirestore(listingWithGeo, result.user.uid);
+                    sendResponse(exportResult);
+                } catch (error) {
+                    sendResponse({ success: false, error: error.message });
+                }
             });
             return true;
 
