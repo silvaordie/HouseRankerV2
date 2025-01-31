@@ -1,0 +1,124 @@
+.import-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.import-content {
+  display: flex;
+  width: 90%;
+  height: 80vh;
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.import-left {
+  width: 40%;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #eee;
+  padding: 20px;
+}
+
+.import-right {
+  width: 60%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f9fa;
+}
+
+.import-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.empty-list {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+.entries-list {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 16px;
+  margin-top: 8px;
+}
+
+.entry-item {
+  padding: 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.entry-item:hover {
+  background-color: #f5f5f5;
+}
+
+.entry-item.selected {
+  background-color: #e3f2fd;
+}
+
+.entry-details {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.entry-icon {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.entry-address {
+  font-size: 14px;
+  color: #333;
+}
+
+.import-guide {
+  text-align: center;
+  padding: 40px;
+  max-width: 400px;
+}
+
+.guide-image {
+  max-width: 200px;
+  margin: 30px 0;
+}
+
+.import-button {
+  width: 100%;
+  margin-top: auto !important;
+}
+
+.error-message {
+  margin-bottom: 16px;
+}
+
+.close-button {
+  min-width: unset !important;
+  padding: 5px 10px !important;
+}
+
+.create-manual-button {
+  margin-bottom: 16px !important;
+}

@@ -51,7 +51,6 @@ export async function exportListingToFirestore(listing, userId) {
     try {
         const sanitizedAddress = listing.address
             .replace(/[\/\\.#$\[\]]/g, '_')
-            .replace(/\s+/g, '_');
 
         const importedRef = doc(db, 'users_entries', userId, 'imported_entries', sanitizedAddress);
         

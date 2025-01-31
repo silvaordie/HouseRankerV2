@@ -27,6 +27,7 @@ import { performance } from '../firebase';
 import { trace } from "firebase/performance";
 import { useCaptchaVerification } from '../components/verifyCaptcha';
 import BugReportButton from '../components/BugReportButton';
+import ImportOverlay from '../components/ImportOverlay/ImportOverlay';
 
 const Dashboard = () => {
   // const useStateWithCache = (key, defaultValue) => {
@@ -74,6 +75,8 @@ const Dashboard = () => {
   const [sortConfig, setSortConfig] = React.useState({ key: "Score", direction: 'dsc' });
   const [isDataLoaded, setIsDataLoaded] = useState(false);  // New state to track the first load
   const captchaVerified = useCaptchaVerification();
+  const [showImportOverlay, setShowImportOverlay] = useState(false);
+  const [editModalTimer, setEditModalTimer] = useState(null);
 
   useEffect(() => {
     if (!captchaVerified) {
@@ -107,10 +110,10 @@ const Dashboard = () => {
         let score = 0;
         // Base score calculation logic
         for (const [field, value] of Object.entries({
-          "Price": entry.info.Price,
-          "Size": entry.info.Size,
-          "Typology": entry.info.Typology,
-          "Coziness": entry.info.Coziness,
+          "Price": entry.info.Price ? entry.info.Price : 0,
+          "Size": entry.info.Size ?   entry.info.Size : 0,
+          "Typology": entry.info.Typology ?   entry.info.Typology : 0,
+          "Coziness": entry.info.Coziness ?  entry.info.Coziness : 0,
         })) {
           if (field === "Price") {
             score += userMaxs[field] !== userStats[field]
@@ -201,33 +204,46 @@ const Dashboard = () => {
         console.log("Fetching data")
         fetchDataTrace.start();
 
+        // Batch all the data fetching first
         const userRef = doc(db, "users", currentUser.uid);
         const udoc = await getDoc(userRef);
-        setUserData(udoc.data());
+        const userData = udoc.data();
 
         const userDocRef = doc(db, "users_entries", currentUser.uid);
         const userDoc = await getDoc(userDocRef);
-        let data = userDoc.data();
-        setSliderValues(data.sliderValues || { "Size": 0, "Typology": 0, "Price": 0, "Coziness": 0 });
-        setUserMaxs(data.maxs || {});
-        setUserStats(data.stats || {});
+        const data = userDoc.data() || {};
 
         const entriesJson = {};
         const pointsOfInterestJson = {};
 
+        // Fetch all collections data first
         for (const typ of ["entries", "pointsOfInterest"]) {
           const collectionRef = collection(db, `users_${typ}/${currentUser.uid}/${typ}`);
           const querySnapshot = await getDocs(collectionRef);
           const mainCollectionRef = collection(db, typ);
 
-          for (const userDoc of querySnapshot.docs) {
+          // Process all documents in parallel using Promise.all
+          await Promise.all(querySnapshot.docs.map(async (userDoc) => {
             const docId = userDoc.id;
             const userDocData = userDoc.data();
             const mainDocRef = doc(mainCollectionRef, docId);
-            const mainDocSnapshot = await getDoc(mainDocRef);
+            let mainDocData;
 
-            if (mainDocSnapshot.exists()) {
-              const mainDocData = mainDocSnapshot.data();
+            try {
+              const mainDocSnapshot = await getDoc(mainDocRef);
+              
+              if (!mainDocSnapshot.exists()) {
+                mainDocData = { geoloc: { lat: 0, lon: 0 } };
+                // Create the document if it doesn't exist
+                await setDoc(mainDocRef, {
+                  info: userDocData,
+                  ...mainDocData
+                });
+              } else {
+                mainDocData = mainDocSnapshot.data();
+              }
+
+              // Store in the appropriate object
               if (typ === "entries") {
                 entriesJson[docId] = {
                   info: userDocData,
@@ -239,32 +255,53 @@ const Dashboard = () => {
                   geolocation: mainDocData.geoloc,
                 };
               }
+            } catch (error) {
+              console.error(`Error processing document ${docId}:`, error);
             }
-          }
+          }));
         }
-        setEntries(entriesJson || {});
-        setPointsOfInterest(pointsOfInterestJson || {});
+
+        // Batch all state updates together
+        const stateUpdates = () => {
+          setUserData(userData);
+          setSliderValues(data.sliderValues || { "Size": 0, "Typology": 0, "Price": 0, "Coziness": 0 });
+          setUserMaxs(data.maxs || {});
+          setUserStats(data.stats || {});
+          setEntries(entriesJson);
+          setPointsOfInterest(pointsOfInterestJson);
+        };
+
+        // Apply all state updates at once
+        stateUpdates();
+
       } catch (error) {
         console.error("Error fetching user data:", error.message);
-        fetchDataTrace.stop();
       } finally {
-        await loadDistances()
         fetchDataTrace.stop();
+        // Only load distances after all state updates are complete
+        if (Object.keys(entries).length > 0 && Object.keys(pointsOfInterest).length > 0) {
+          await loadDistances();
+        }
       }
-    };
+    }
   }
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [captchaVerified, currentUser]);
   useEffect(() => {
-    // Trigger loadDistances() only after entries and pointsOfInterest have been set for the first time
-    if (!isDataLoaded && Object.keys(entries).length > 0 && Object.keys(pointsOfInterest).length > 0 && captchaVerified && currentUser) {
-      loadDistances();
-      setIsDataLoaded(true);  // Set the flag to true so it doesn't run again
+    if (!isDataLoaded && 
+        Object.keys(entries).length > 0 && 
+        Object.keys(pointsOfInterest).length > 0 && 
+        captchaVerified && 
+        currentUser) {
+      const loadData = async () => {
+        await loadDistances();
+        setIsDataLoaded(true);
+      };
+      loadData();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, captchaVerified, entries, pointsOfInterest, isDataLoaded]);
+  }, [entries, pointsOfInterest, isDataLoaded, captchaVerified, currentUser]);
 
   const saveUserData = async (updatedData) => {
     if (currentUser) {
@@ -426,20 +463,19 @@ const Dashboard = () => {
   };
   // Save point of interest
   const savePointOfInterest = () => {
-    if(address)
-    {
+    if (address) {
       let newPoint = { name, importance: poiSliders, maxs };
       add_update_place("pointsOfInterest", address, newPoint);
-  
+
       if (currentPoint)
         newPoint = { name, importance: poiSliders, maxs, geolocation: pointsOfInterest[currentPoint].geolocation };
       else
         newPoint = { name, importance: poiSliders, maxs, geolocation };
-  
+
       let updatedPointsOfInterest = { ...pointsOfInterest };  // Create a new object
       updatedPointsOfInterest[address] = newPoint;  // Edit existing point
       setPointsOfInterest(updatedPointsOfInterest);  // Update state
-  
+
       setIsNewPointOpen(false);
       setName(null)
       setAddress(null)
@@ -605,22 +641,22 @@ const Dashboard = () => {
           {/* Use Tooltip and LinkIcon */}
           <Tooltip title={entry.info.Link} arrow>
             <span>
-              {entry.info.Link?
-              <a href={entry.info.Link} target="_blank" rel="noopener noreferrer">
-                <LinkIcon style={{ fontSize: '18px', cursor: 'pointer' }} />
-              </a>
-              :
-              <Typography>-</Typography>
+              {entry.info.Link ?
+                <a href={entry.info.Link} target="_blank" rel="noopener noreferrer">
+                  <LinkIcon style={{ fontSize: '18px', cursor: 'pointer' }} />
+                </a>
+                :
+                <Typography>-</Typography>
               }
             </span>
           </Tooltip>
         </td>,
-        <td key="address">{entry.info.Address?entry.info.Address:"-"}</td>,
-        <td key="description">{entry.info.Description?entry.info.Description:"-"}</td>,
-        <td key="price">{entry.info.Price?entry.info.Price:"-"}</td>,
-        <td key="typology">{entry.info.Typology?entry.info.Typology:"-"}</td>,
-        <td key="sqMeters">{entry.info.Size?entry.info.Size:"-"}</td>,
-        <td key="coziness">{entry.info.Coziness?entry.info.Coziness:"0"}</td>,
+        <td key="address">{entry.info.Address ? entry.info.Address : "-"}</td>,
+        <td key="description">{entry.info.Description ? entry.info.Description : "-"}</td>,
+        <td key="price">{entry.info.Price ? entry.info.Price : "-"}</td>,
+        <td key="typology">{entry.info.Typology ? entry.info.Typology : "-"}</td>,
+        <td key="sqMeters">{entry.info.Size ? entry.info.Size : "-"}</td>,
+        <td key="coziness">{entry.info.Coziness ? entry.info.Coziness : "0"}</td>,
       ];
 
       const interestPointDataCells = Object.entries(pointsOfInterest).map(([pointId, point], index) => [
@@ -677,10 +713,7 @@ const Dashboard = () => {
 
   const openAddEntryModal = async () => {
     if (userData && userData.tokens.entries > 0) {
-      setAddress('');
-      setCurrentEntry({ "info": { Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Coziness: '' } });
-      setIsEditing(false);
-      setIsNewHouseOpen(true);
+      setShowImportOverlay(true);
     }
     else {
       setOutOfTokens(true);
@@ -689,36 +722,57 @@ const Dashboard = () => {
 
   // Open modal for editing an entry, ensuring `currentEntry` is defined
   const openEditEntryModal = (entry) => {
-    setCurrentEntry(entry || { "info": { Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Coziness: '' } });
-    setAddress(entry.info.Address)
+    if (editModalTimer) {
+      clearTimeout(editModalTimer);
+    }
+    
+    // Deep copy the entry
+    const entryToEdit = {
+      info: JSON.parse(JSON.stringify(entry.info)),
+      geolocation: entry.geolocation
+    };
+    
+    setCurrentEntry(entryToEdit);
+    if (entryToEdit.info.Address) {
+      setAddress(entryToEdit.info.Address);
+    }
+    
     setIsEditing(true);
-    setIsNewHouseOpen(true);
+    // Delay opening the modal slightly to prevent state conflicts
+    const timer = setTimeout(() => {
+      setIsNewHouseOpen(true);
+    }, 0);
+    setEditModalTimer(timer);
   };
 
   // Update function for input fields in the modal
   const handleNewEntryChange = (field, value) => {
-    if (field === "Address" || field === "Link" || field === "Description")
-      setCurrentEntry((prev) => ({
+    if (currentEntry?.info?.[field] === value) return;
+
+    setCurrentEntry(prev => {
+      if (!prev) return prev;
+      return {
         ...prev,
         info: {
-          ...prev.info, // Spread the existing fields in `info`
-          [field]: value, // Update the specific field in `info`
-        },
-      }));
-    else
-      if (field !== "Coziness" || (field === "Coziness" && Number(value) >= 0 && Number(value) <= 5))
-        setCurrentEntry((prev) => ({
-          ...prev,
-          info: {
-            ...prev.info, // Spread the existing fields in `info`
-            [field]: Number(value), // Update the specific field in `info`
-          },
-        }));
+          ...prev.info,
+          [field]: field === "Coziness" 
+            ? (Number(value) >= 0 && Number(value) <= 5 ? Number(value) : prev.info[field])
+            : field === "Price" || field === "Size" || field === "Typology"
+              ? Number(value) || value
+              : value
+        }
+      };
+    });
   };
 
   const handleAddressChange = (newAddress, newGeolocation) => {
-    setAddress(newAddress);  // Save the address
-    setGeolocation(newGeolocation);  // Save the geolocation (latitude, longitude)
+    // Only update if values actually changed
+    if (address !== newAddress) {
+      setAddress(newAddress);
+    }
+    if (geolocation?.lat !== newGeolocation?.lat || geolocation?.lon !== newGeolocation?.lon) {
+      setGeolocation(newGeolocation);
+    }
   };
 
   const saveOrUpdateEntry = () => {
@@ -732,7 +786,7 @@ const Dashboard = () => {
           [address]: {
             ...prevEntries[address], // Spread existing properties of the current entry
             info: updatedEntry.info, // Update the `info` section
-            geolocation: updatedEntry.geolocation ?  updatedEntry.geolocation : geolocation 
+            geolocation: updatedEntry.geolocation ? updatedEntry.geolocation : geolocation
           },
         }));
 
@@ -744,6 +798,13 @@ const Dashboard = () => {
 
     }
 
+  };
+
+  const handleCreateManualEntry = () => {
+    setCurrentEntry({ "info": { Link: '', Description: '', Address: '', Typology: '', Size: '', Price: '', Coziness: '' } });
+    setAddress('');
+    setIsEditing(false);
+    setIsNewHouseOpen(true);
   };
 
   const colors = ["#db284e", "#db284e", "#db8829", "#c9db29", "#4caf50", "#007bff"]
@@ -993,14 +1054,14 @@ const Dashboard = () => {
             </div>
             <div style={{ marginLeft: '20px', textAlign: 'center' }}>
               <Typography>Max <Tooltip title="What's the maximum commute duration you would consider for each transport type, in minutes?" arrow>
-              <span style={{ cursor: 'pointer' }}>
-                <HelpOutlineIcon style={{ color: '#fff', backgroundColor: '#808080', borderRadius: '50%', padding: '0px', fontSize: '14px' }} />
-              </span>
-            </Tooltip></Typography>
+                <span style={{ cursor: 'pointer' }}>
+                  <HelpOutlineIcon style={{ color: '#fff', backgroundColor: '#808080', borderRadius: '50%', padding: '0px', fontSize: '14px' }} />
+                </span>
+              </Tooltip></Typography>
               <input
                 type="number"
                 style={{ width: '60px' }}
-                value={pointsOfInterest[currentPoint]? pointsOfInterest[currentPoint].maxs["walking"] : maxs[0]}
+                value={pointsOfInterest[currentPoint] ? pointsOfInterest[currentPoint].maxs["walking"] : maxs[0]}
                 placeholder="mins"
                 onChange={(e) => setMaxs(prevMaxs => ({
                   ...prevMaxs,
@@ -1026,7 +1087,7 @@ const Dashboard = () => {
             <input
               type="number"
               style={{ width: '60px', marginLeft: '20px' }}
-              value={pointsOfInterest[currentPoint]? pointsOfInterest[currentPoint].maxs["transport"] : maxs[1]}
+              value={pointsOfInterest[currentPoint] ? pointsOfInterest[currentPoint].maxs["transport"] : maxs[1]}
               placeholder="mins"
               onChange={(e) => setMaxs(prevMaxs => ({
                 ...prevMaxs,
@@ -1050,7 +1111,7 @@ const Dashboard = () => {
             <input
               type="number"
               style={{ width: '60px', marginLeft: '20px' }}
-              value={pointsOfInterest[currentPoint]? pointsOfInterest[currentPoint].maxs["car"] : maxs[2]}
+              value={pointsOfInterest[currentPoint] ? pointsOfInterest[currentPoint].maxs["car"] : maxs[2]}
               placeholder="mins"
               onChange={(e) => setMaxs(prevMaxs => ({
                 ...prevMaxs,
@@ -1072,7 +1133,14 @@ const Dashboard = () => {
       </Modal>
 
       <BugReportButton></BugReportButton>
-
+      {showImportOverlay && (
+        <ImportOverlay
+          onClose={() => setShowImportOverlay(false)}
+          userData={userData}
+          onImportComplete={fetchData}
+          onCreateManual={handleCreateManualEntry}
+        />
+      )}
     </div>
   );
 };
