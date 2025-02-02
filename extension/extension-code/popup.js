@@ -221,6 +221,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               target: { tabId: tab.id },
               files: [
                 'scrapers/base-scraper.js',
+                'scrapers/idealista-scraper.js', // Add this line
                 'scrapers/immo24-scraper.js',
                 'scrapers/scraper-factory.js',
                 'scraper.js'
