@@ -4,6 +4,7 @@ class IdealistaScraper extends BaseScraper {
         this.websiteUrl = 'https://www.idealista.pt';
         this.name = 'Idealista';
         this.domain = 'idealista.pt';
+        this.currency = 'EUR';  // Add currency
     }
 
     parseAddress(addressString) {

@@ -3,6 +3,7 @@ class BaseScraper {
         this.websiteUrl = '';
         this.name = '';
         this.domain = '';
+        this.currency = 'CHF'; // Default currency
     }
 
     // Should be implemented by child classes
@@ -68,6 +69,7 @@ class BaseScraper {
             price: this.parsePrice(priceRaw),
             size: this.parseSize(sizeRaw),
             typology: this.parseTypology(typologyRaw),
+            currency: this.currency // Add currency to the listing data
         };
     }
 }

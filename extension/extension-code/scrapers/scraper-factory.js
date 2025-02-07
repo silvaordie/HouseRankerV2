@@ -1,8 +1,9 @@
-// Make sure IdealistaScraper and Immoscout24Scraper are defined before this
+// Make sure IdealistaScraper, Immoscout24Scraper, and RightmoveScraper are defined before this
 class ScraperFactory {
     static scrapers = {
       'idealista.pt': IdealistaScraper,
-      'immoscout24.ch': Immoscout24Scraper
+      'immoscout24.ch': Immoscout24Scraper,
+      'rightmove.co.uk': RightmoveScraper
     };
 
     static getScraper(domain) {

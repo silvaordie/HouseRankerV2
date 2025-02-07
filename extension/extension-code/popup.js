@@ -223,6 +223,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 'scrapers/base-scraper.js',
                 'scrapers/idealista-scraper.js', // Add this line
                 'scrapers/immo24-scraper.js',
+                'scrapers/rightmove-scraper.js',
                 'scrapers/scraper-factory.js',
                 'scraper.js'
               ]
@@ -267,6 +268,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
+// ...existing code...
+
 function displayListings(listings) {
     listingsContainer.innerHTML = '';
     listings.forEach(listing => {
@@ -296,11 +299,18 @@ function displayListings(listings) {
         
         const detailsTable = document.createElement('table');
         detailsTable.style.width = '100%';
+        
+        // Get the current domain and find the appropriate scraper to get currency
+        const domain = new URL(window.location.href).hostname.replace('www.', '');
+        const scraper = ScraperFactory.getScraper(domain);
+        const currency = scraper ? scraper.currency : ''; // Default to CHF if no scraper found
+        
         detailsTable.innerHTML = `
-            <tr><td>Price:</td><td>${listing.price} CHF</td></tr>
-            <tr><td>Size:</td><td>${listing.size} m²</td></tr>
+            <tr><td>Price:</td><td>${listing.price} ${currency}</td></tr>
+            <tr><td>Size:</td><td>${listing.size} m&sup2;</td></tr>
             <tr><td>Typology:</td><td>${listing.typology} rooms</td></tr>
         `;
+        
         details.appendChild(detailsTable);
         
         listingElement.appendChild(headerDiv);

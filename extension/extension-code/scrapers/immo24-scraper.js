@@ -4,6 +4,7 @@ class Immoscout24Scraper extends BaseScraper {
         this.websiteUrl = 'https://www.immoscout24.ch';
         this.name = 'ImmoScout24';
         this.domain = 'immoscout24.ch';
+        this.currency = 'CHF';  // Add currency
     }
 
     getListings() {
