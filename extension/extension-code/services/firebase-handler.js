@@ -56,6 +56,7 @@ export async function exportListingToFirestore(listing, userId) {
         const importedRef = doc(db, 'users_entries', userId, 'imported_entries', sanitizedAddress);
         
         const listingData = {
+            url: listing.id, 
             img: listing.img,
             Price: listing.price,
             Size: listing.size,

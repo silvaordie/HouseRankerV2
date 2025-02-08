@@ -193,8 +193,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     return;
                 }
                 try {
-                    // Get geolocation data for one listing
+                    // Get geolocation data for the listing
                     const geoData = await getGeolocation(request.listing.address);
+                    
+                    // Fail if no geolocation data
+                    if (!geoData) {
+                        sendResponse({ 
+                            success: false, 
+                            error: 'Could not fetch geolocation data for this address' 
+                        });
+                        return;
+                    }
                     
                     // Add geolocation to the listing
                     const listingWithGeo = {
@@ -202,7 +211,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         geolocation: geoData
                     };
                     
-                    // Export single listing to Firestore
+                    // Export to Firestore
                     const exportResult = await exportListingToFirestore(listingWithGeo, result.user.uid);
                     sendResponse(exportResult);
                 } catch (error) {

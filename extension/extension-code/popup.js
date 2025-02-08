@@ -53,9 +53,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // Show loading overlay
-        loadingOverlay.style.display = 'flex';
-        progressText.textContent = '0%';
         exportBtn.disabled = true;
         
         try {
@@ -64,35 +61,89 @@ document.addEventListener('DOMContentLoaded', async () => {
                 throw new Error('User not authenticated');
             }
 
+            // Convert all listing elements to "Exporting..." state
+            const listingElements = listingsContainer.querySelectorAll('.listing');
+            listingElements.forEach((element, index) => {
+                if (element.querySelector('input[type="checkbox"]').checked) {
+                    const listing = currentListings[index];
+                    element.innerHTML = `
+                        <div class="listing-export-status">
+                            <div class="listing-header">
+                                <img src="${listing.img}" alt="" class="listing-image">
+                                <div class="status-content">
+                                    <span class="listing-address">${listing.address}</span>
+                                    <span class="status-text">Exporting...</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    element.classList.add('exporting');
+                    element.dataset.url = listing.id; // Store URL in dataset
+
+                    // Add click handler for URL opening
+                    element.addEventListener('click', () => {
+                        if (listing.id) {
+                            chrome.tabs.create({ 
+                                url: listing.id,
+                                active: false // Keep focus on current tab
+                            });
+                        }
+                    });
+                }
+            });
+
             let successCount = 0;
             for (const [index, listing] of listings.entries()) {
-                statusText.textContent = `Exporting listing ${index + 1} of ${listings.length}...`;
+                const currentElement = [...listingElements].find((el, i) => 
+                    el.classList.contains('exporting') && 
+                    i === Array.from(checkboxes).findIndex((cb, j) => cb.checked && j >= i)
+                );
                 
-                const result = await chrome.runtime.sendMessage({
-                    type: 'EXPORT_LISTING',
-                    listing: listing,
-                    userId: authState.user.uid
-                });
+                try {
+                    const result = await chrome.runtime.sendMessage({
+                        type: 'EXPORT_LISTING',
+                        listing: listing,
+                        userId: authState.user.uid
+                    });
 
-                if (result.success) {
-                    successCount++;
-                    const progress = Math.round((successCount / listings.length) * 100);
-                    // Update both text and visual progress
-                    progressText.textContent = `${progress}%`;
-                    document.querySelector('.circular-progress').style.setProperty('--progress', `${progress}%`);
-                } else {
-                    throw new Error(`Failed to export listing: ${result.error}`);
+                    if (result.success) {
+                        successCount++;
+                        if (currentElement) {
+                            const statusDiv = currentElement.querySelector('.status-content');
+                            statusDiv.querySelector('.status-text').textContent = 'Exported Successfully';
+                            currentElement.classList.remove('exporting');
+                            currentElement.classList.add('exported');
+                        }
+                    } else {
+                        if (currentElement) {
+                            const statusDiv = currentElement.querySelector('.status-content');
+                            statusDiv.querySelector('.status-text').textContent = 'Export Failed';
+                            statusDiv.insertAdjacentHTML('beforeend', 
+                                `<span class="error-details">${result.error}</span>`
+                            );
+                            currentElement.classList.remove('exporting');
+                            currentElement.classList.add('failed');
+                        }
+                    }
+                } catch (error) {
+                    if (currentElement) {
+                        const statusDiv = currentElement.querySelector('.status-content');
+                        statusDiv.querySelector('.status-text').textContent = 'Export Failed';
+                        statusDiv.insertAdjacentHTML('beforeend', 
+                            `<span class="error-details">${error.message}</span>`
+                        );
+                        currentElement.classList.remove('exporting');
+                        currentElement.classList.add('failed');
+                    }
                 }
             }
 
-            alert(`Successfully exported ${successCount} listings!`);
+            alert(`Export complete: ${successCount} of ${listings.length} listings exported successfully`);
         } catch (error) {
             console.error('Export error:', error);
             alert(`Export failed: ${error.message}`);
         } finally {
-            loadingOverlay.style.display = 'none';
             exportBtn.disabled = false;
-            exportBtn.textContent = 'Export Selected Listings';
         }
     }
     
@@ -271,57 +322,74 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ...existing code...
 
 function displayListings(listings) {
-    listingsContainer.innerHTML = '';
-    listings.forEach(listing => {
-        const listingElement = document.createElement('div');
-        listingElement.className = 'listing';
+    chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
+        listingsContainer.innerHTML = '';
+        const domain = new URL(tab.url).hostname.replace('www.', '');
         
-        const headerDiv = document.createElement('div');
-        headerDiv.className = 'listing-header';
-        
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.checked = true;
-        
-        const img = document.createElement('img');
-        img.src = listing.img;
-        
-        const address = document.createElement('span');
-        address.className = 'listing-address';
-        address.textContent = listing.address;
-        
-        headerDiv.appendChild(checkbox);
-        headerDiv.appendChild(img);
-        headerDiv.appendChild(address);
-        
-        const details = document.createElement('div');
-        details.className = 'listing-details';
-        
-        const detailsTable = document.createElement('table');
-        detailsTable.style.width = '100%';
-        
-        // Get the current domain and find the appropriate scraper to get currency
-        const domain = new URL(window.location.href).hostname.replace('www.', '');
-        const scraper = ScraperFactory.getScraper(domain);
-        const currency = scraper ? scraper.currency : ''; // Default to CHF if no scraper found
-        
-        detailsTable.innerHTML = `
-            <tr><td>Price:</td><td>${listing.price} ${currency}</td></tr>
-            <tr><td>Size:</td><td>${listing.size} m&sup2;</td></tr>
-            <tr><td>Typology:</td><td>${listing.typology} rooms</td></tr>
-        `;
-        
-        details.appendChild(detailsTable);
-        
-        listingElement.appendChild(headerDiv);
-        listingElement.appendChild(details);
-        
-        listingElement.addEventListener('click', (e) => {
-            if (e.target !== checkbox) {
-                details.style.display = details.style.display === 'none' ? 'block' : 'none';
-            }
+        listings.forEach(listing => {
+            const listingElement = document.createElement('div');
+            listingElement.className = 'listing';
+            listingElement.dataset.url = listing.id; // Store URL in dataset
+            
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'listing-header';
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = true;
+            
+            const img = document.createElement('img');
+            img.src = listing.img;
+            
+            const address = document.createElement('span');
+            address.className = 'listing-address';
+            address.textContent = listing.address;
+            
+            headerDiv.appendChild(checkbox);
+            headerDiv.appendChild(img);
+            headerDiv.appendChild(address);
+            
+            const details = document.createElement('div');
+            details.className = 'listing-details';
+            
+            const detailsTable = document.createElement('table');
+            detailsTable.style.width = '100%';
+            
+            const scraper = ScraperFactory.getScraper(domain);
+            const currency = scraper ? scraper.currency : '';
+
+            detailsTable.innerHTML = `
+                <tr><td>Price:</td><td>${listing.price} ${currency}</td></tr>
+                <tr><td>Size:</td><td>${listing.size} m&sup2;</td></tr>
+                <tr><td>Typology:</td><td>${listing.typology} rooms</td></tr>
+            `;
+            
+            details.appendChild(detailsTable);
+            
+            listingElement.appendChild(headerDiv);
+            listingElement.appendChild(details);
+            
+            // Modify click handler to handle both toggling details and opening URL
+            listingElement.addEventListener('click', (e) => {
+                if (e.target === checkbox) {
+                    return; // Don't do anything if checkbox was clicked
+                }
+                
+                if (e.ctrlKey || e.metaKey) {
+                    // Open URL in new tab without switching to it
+                    if (listing.id) {
+                        chrome.tabs.create({ 
+                            url: listing.id,
+                            active: false // This prevents switching to the new tab
+                        });
+                    }
+                } else {
+                    // Toggle details if normal click
+                    details.style.display = details.style.display === 'none' ? 'block' : 'none';
+                }
+            });
+            
+            listingsContainer.appendChild(listingElement);
         });
-        
-        listingsContainer.appendChild(listingElement);
     });
 }

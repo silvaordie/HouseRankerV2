@@ -61,7 +61,6 @@ class BaseScraper {
 
     // Common method to format the final data
     formatListingData(id, address, img, priceRaw, sizeRaw, typologyRaw) {
-        console.log(img)
         return {
             id: this.websiteUrl + id,
             address: this.parseAddress(address),

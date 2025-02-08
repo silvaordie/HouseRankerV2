@@ -48,8 +48,8 @@ class RightmoveScraper extends BaseScraper {
                     const typologyElement = listing.querySelector('.PropertyInformation_bedroomsCount___2b5R');
                     const typologyRaw = typologyElement ? typologyElement.textContent.trim() : '0';
 
-                    // Updated image selector
-                    const imgElement = listing.querySelector('img.PropertyCardImage_fallback__KYBHc');
+                    // Updated image selector to use aria-label
+                    const imgElement = listing.querySelector('img[aria-label="Property image 1"]');
                     const img = imgElement ? imgElement.src : '';
 
                     // Updated price selector

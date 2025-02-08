@@ -38,11 +38,34 @@
     .listing {
       display: flex;
       flex-direction: column;
-      margin-bottom: 10px;
+      margin-bottom: 20px; /* Increase bottom margin to prevent tooltip clipping */
       background-color: var(--listing-background-color);
       padding: 10px;
       border-radius: 4px;
       cursor: pointer;
+      position: relative;
+    }
+    .listing:hover::after {
+      content: "Click to toggle details, Ctrl+Click to open listing";
+      position: absolute;
+      bottom: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--background-color);
+      color: var(--text-color);
+      border: 1px solid var(--text-color);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      white-space: nowrap;
+      z-index: 1000;
+      opacity: 0.95;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .listing.exporting:hover::after,
+    .listing.exported:hover::after,
+    .listing.failed:hover::after {
+      content: "Click to open listing";
     }
     .listing-header {
       display: flex;
@@ -97,6 +120,7 @@
     #listingsContainer {
       max-height: 400px;
       overflow-y: auto;
+      padding-bottom: 20px;
     }
 
     /* Light mode variables */
@@ -155,6 +179,94 @@
     }
     .signout-btn {
       background-color: #dc3545;
+    }
+    .listing-export-status {
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 4px;
+        display: flex;
+        flex-direction: column;
+        cursor: pointer;
+    }
+
+    .listing.exporting .listing-export-status {
+        background-color: var(--listing-background-color);
+    }
+
+    .listing.exported .listing-export-status {
+        background-color: var(--success-background-color);
+        color: var(--success-text-color);
+    }
+
+    .listing.failed .listing-export-status {
+        background-color: var(--error-background-color);
+        color: var(--error-text-color);
+    }
+
+    .error-details {
+        font-size: 0.8em;
+        margin-top: 5px;
+        opacity: 0.8;
+    }
+
+    .listing-export-status {
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .listing-export-status .listing-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .listing-export-status .listing-image {
+        width: 50px;
+        height: 50px;
+        border-radius: 4px;
+        object-fit: cover;
+    }
+
+    .listing-export-status .status-content {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .listing-export-status .listing-address {
+        font-weight: bold;
+        word-break: break-word;
+    }
+
+    .listing-export-status .status-text {
+        font-size: 0.9em;
+    }
+
+    .listing.exporting .listing-export-status {
+        background-color: var(--listing-background-color);
+    }
+
+    .listing.exported .listing-export-status {
+        background-color: var(--success-background-color);
+    }
+
+    .listing.failed .listing-export-status {
+        background-color: var(--error-background-color);
+    }
+
+    .listing-export-status:hover {
+        opacity: 0.9;
+    }
+
+    .listing, .listing-export-status {
+        cursor: pointer;
+    }
+
+    .listing:hover, .listing-export-status:hover {
+        opacity: 0.9;
     }
   </style>
   <!-- Replace CDN scripts with local files -->
