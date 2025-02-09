@@ -92,17 +92,18 @@ const ImportOverlay = ({ onClose, userData, onImportComplete, onCreateManual }) 
         // Create the main entry document with basic info
         const newEntryRef = doc(collection(db, `users_entries/${currentUser.uid}/entries`), entryId);
         await setDoc(newEntryRef, {
-          Address: entry.address,
-          Price: entry.price,
-          Size: entry.size,
-          Typology: entry.typology
+          Address: entry.Address,
+          Price: entry.Price,
+          Size: entry.Size,
+          Typology: entry.Typology,
+          Link: entry.url,
         });
         
         // Create/Update the entry metadata in the entries collection
-        const entryMetadataRef = doc(db, 'entries', entry.address);
+        const entryMetadataRef = doc(db, 'entries', entry.Address);
         await setDoc(entryMetadataRef, {
           createdAt: serverTimestamp(),
-          geolocation: entry.geolocation || null,
+          geoloc: entry.geolocation || null,
         }, { merge: true });
         
         // Delete from imported entries

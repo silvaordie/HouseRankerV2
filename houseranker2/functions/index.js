@@ -219,7 +219,7 @@ exports.calculateDistance = functions.https.onCall(async (data, context) => {
 
       for (const mode of modes) {
         const url = `https://maps.googleapis.com/maps/api/distancematrix/json`;
-
+        console.log(entryGeoloc)
         const response = await axios.get(url, {
           params: {
             origins: `${entryGeoloc.lat},${entryGeoloc.lon}`,
@@ -228,7 +228,7 @@ exports.calculateDistance = functions.https.onCall(async (data, context) => {
             mode: mode,
           }
         });
-
+        console.log(response.data)
         const result = response.data;
 
         if (result.status !== 'OK' || result.rows[0].elements[0].status !== 'OK') {
@@ -288,7 +288,7 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
 
 exports.handleStripeWebhook = functions.https.onRequest(async (req, res) => {
   const sig = req.headers["stripe-signature"];
-  const tokens = { 2050: { "pointsOfInterest": 3, "entries": 25 }, 1550: { "pointsOfInterest": 3, "entries": 15 }, 100: { "pointsOfInterest": 0, "entries": 10 } };
+  const tokens = { 2000: { "pointsOfInterest": 3, "entries": 40 }, 1000: { "pointsOfInterest": 3, "entries": 15 }, 500: { "pointsOfInterest": 0, "entries": 20 } };
   let event;
   try {
     event = stripe.webhooks.constructEvent(req.rawBody, sig, STRIPE_WEBHOOK_SECRET);

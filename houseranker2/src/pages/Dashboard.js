@@ -77,7 +77,6 @@ const Dashboard = () => {
   const captchaVerified = useCaptchaVerification();
   const [showImportOverlay, setShowImportOverlay] = useState(false);
   const [editModalTimer, setEditModalTimer] = useState(null);
-
   useEffect(() => {
     if (!captchaVerified) {
       // If the CAPTCHA is not verified, you might want to display a loading indicator
@@ -255,6 +254,7 @@ const Dashboard = () => {
                   geolocation: mainDocData.geoloc,
                 };
               }
+              console.log(entriesJson)
             } catch (error) {
               console.error(`Error processing document ${docId}:`, error);
             }
@@ -806,6 +806,7 @@ const Dashboard = () => {
     setIsEditing(false);
     setIsNewHouseOpen(true);
   };
+  console.log(sortedEntries)
 
   const colors = ["#db284e", "#db284e", "#db8829", "#c9db29", "#4caf50", "#007bff"]
   const icons = { "walking": "person-walking", "transport": "train", "car": "car" }
@@ -994,7 +995,7 @@ const Dashboard = () => {
                 key={field}
                 label={field}
                 value={(currentEntry && currentEntry.info && currentEntry.info[field]) || ''} // Show currentEntry values
-                disabled={isEditing && (field === "Link" || field === "Address")}
+                disabled={isEditing && (field === "Address")}
                 onChange={(e) => handleNewEntryChange(field, e.target.value)}
                 fullWidth
                 margin="normal"

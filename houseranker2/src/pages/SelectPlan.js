@@ -38,12 +38,12 @@ function SelectPlan() {
     return <div>Verifying CAPTCHA...</div>;
   }
 
-  const prices = { "1-tier": 1, "2-tier": 15.5, "3-tier": 20.5 }
+  const prices = { "1-tier": 5, "2-tier": 10, "3-tier": 20 }
   const plans = [
     {
       id: "1-tier",
       title: "1-Tier",
-      description: ["+10 House entries"],
+      description: ["+20 House entries"],
     },
     {
       id: "2-tier",
@@ -53,7 +53,7 @@ function SelectPlan() {
     {
       id: "3-tier",
       title: "3-Tier",
-      description: ["+3 Points of interest", "+25 House entries"],
+      description: ["+3 Points of interest", "+40 House entries"],
     },
   ];
 
