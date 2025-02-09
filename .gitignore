@@ -2,6 +2,8 @@
 /payment
 /public
 /src
-/extension
+
 houserankerv2/.env.local
 houseranker2/functions/.env
+houseranker2/functions/.env
+houseranker2/.env.local

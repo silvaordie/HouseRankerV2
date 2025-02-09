@@ -29,8 +29,9 @@ const googleProvider = new GoogleAuthProvider();
 const facebookProvider = new FacebookAuthProvider();
 const functions = getFunctions(app);
 const performance = getPerformance(app);
+const ENV = process.env.REACT_APP_ENV
 
-if (  process.env.NODE_ENV === "development" ) 
+if (ENV != "PROD") 
 {
   try {
     console.log("Connecting to Firebase emulators...");

@@ -6,7 +6,7 @@ import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
 import "leaflet.awesome-markers";
 import isEqual from "lodash/isEqual"; // Import lodash for deep comparison
 
-const CenterAndZoomUpdater = ({ pointsOfInterest, sortedEntries }) => {
+const CenterAndZoomUpdater = ({ pointsOfInterest = {}, sortedEntries = [] }) => {
   const map = useMap();
   const prevDataRef = useRef({ pointsOfInterest: null, sortedEntries: null });
 
@@ -28,20 +28,33 @@ const CenterAndZoomUpdater = ({ pointsOfInterest, sortedEntries }) => {
     }
 
     const bounds = L.latLngBounds();
+    let hasValidBounds = false;
 
     // Add points of interest to bounds
-    Object.values(pointsOfInterest).forEach((poi) => {
-      bounds.extend([poi.geolocation.lat, poi.geolocation.lon]);
-    });
+    if (pointsOfInterest && Object.keys(pointsOfInterest).length > 0) {
+      Object.values(pointsOfInterest).forEach((poi) => {
+        if (poi?.geolocation?.lat && poi?.geolocation?.lon) {
+          bounds.extend([poi.geolocation.lat, poi.geolocation.lon]);
+          hasValidBounds = true;
+        }
+      });
+    }
 
     // Add sorted entries to bounds
-    sortedEntries.forEach(([_, entry]) => {
-      if (entry && entry.geolocation)
-        bounds.extend([entry.geolocation.lat, entry.geolocation.lon]);
-    });
+    if (sortedEntries && sortedEntries.length > 0) {
+      sortedEntries.forEach(([_, entry]) => {
+        if (entry?.geolocation?.lat && entry?.geolocation?.lon) {
+          bounds.extend([entry.geolocation.lat, entry.geolocation.lon]);
+          hasValidBounds = true;
+        }
+      });
+    }
 
-    if (bounds.isValid()) {
+    if (hasValidBounds) {
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+    } else {
+      // Default center if no valid bounds
+      map.setView([51.505, -0.09], 13);
     }
 
     prevDataRef.current = { pointsOfInterest, sortedEntries };
@@ -51,7 +64,7 @@ const CenterAndZoomUpdater = ({ pointsOfInterest, sortedEntries }) => {
 };
 
 
-const MapComponent = ({ pointsOfInterest, sortedEntries }) => {
+const MapComponent = ({ pointsOfInterest = {}, sortedEntries = [] }) => {
   const getCustomIcon = (color) => {
     return L.AwesomeMarkers.icon({
       icon: "fa-home",
@@ -64,8 +77,8 @@ const MapComponent = ({ pointsOfInterest, sortedEntries }) => {
   return (
     <div className="map-container" style={{ height: "100%", width: "100%" }}>
       <MapContainer
-        center={[0, 0]} // Initial center (adjust if needed)
-        zoom={13} // Initial zoom
+        center={[51.505, -0.09]} // Default center
+        zoom={13} // Default zoom
         style={{ height: "100%", width: "100%" }}
       >
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
@@ -77,39 +90,45 @@ const MapComponent = ({ pointsOfInterest, sortedEntries }) => {
         />
 
         {/* Render POIs */}
-        {Object.values(pointsOfInterest).map((poi, index) => (
-          <Marker
-            key={`poi-${index}`}
-            position={[poi.geolocation.lat, poi.geolocation.lon]}
-            icon={L.AwesomeMarkers.icon({
-              icon: "fa-star",
-              markerColor: "purple",
-              prefix: "fa",
-              iconColor: "white",
-            })}
-          >
-            <Popup>{poi.name}</Popup>
-          </Marker>
-        ))}
-
-        {/* Render the top 4 custom-ranked markers */}
-        {sortedEntries.slice(0, 4).map(([_, entry], index) => {
-          const colors = ["blue", "green", "orange", "red"];
-          const iconColor = colors[index];
-          if (entry.geolocation)
-          {
+        {pointsOfInterest && Object.entries(pointsOfInterest).map(([key, poi]) => {
+          if (poi?.geolocation?.lat && poi?.geolocation?.lon) {
             return (
               <Marker
-                key={`custom-${index}`}
-                position={[
-                  parseFloat(entry.geolocation.lat),
-                  parseFloat(entry.geolocation.lon),
-                ]}
-                icon={getCustomIcon(iconColor)}
-              />
+                key={`poi-${key}`}
+                position={[poi.geolocation.lat, poi.geolocation.lon]}
+                icon={L.AwesomeMarkers.icon({
+                  icon: "fa-star",
+                  markerColor: "purple",
+                  prefix: "fa",
+                  iconColor: "white",
+                })}
+              >
+                <Popup>{poi.name || 'Point of Interest'}</Popup>
+              </Marker>
             );
           }
-          return null
+          return null;
+        })}
+
+        {/* Render the top 4 custom-ranked markers */}
+        {sortedEntries && sortedEntries.slice(0, 4).map(([id, entry], index) => {
+          const colors = ["blue", "green", "orange", "red"];
+          const iconColor = colors[index];
+          if (entry?.geolocation?.lat && entry?.geolocation?.lon) {
+            return (
+              <Marker
+                key={`entry-${id}`}
+                position={[
+                  entry.geolocation.lat,
+                  entry.geolocation.lon,
+                ]}
+                icon={getCustomIcon(iconColor)}
+              >
+                <Popup>{entry.info?.Address || 'Property'}</Popup>
+              </Marker>
+            );
+          }
+          return null;
         })}
       </MapContainer>
     </div>

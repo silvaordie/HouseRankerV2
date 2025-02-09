@@ -10,7 +10,12 @@ import { useAuth } from "./AuthContext";
 
 const App = () => {
     const { currentUser } = useAuth();
-
+    const recaptchaKey = process.env.REACT_APP_ENV == "PROD" ? process.env.REACT_APP_GOOGLE_CAPTCHA_SITE_KEY_PROD:process.env.REACT_APP_GOOGLE_CAPTCHA_SITE_KEY; // Use a frontend env variable
+    const script = document.createElement('script');
+    script.src = `https://www.google.com/recaptcha/api.js?render=${recaptchaKey}&debug=true`;
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
     return (
         <Router>
         <Routes>

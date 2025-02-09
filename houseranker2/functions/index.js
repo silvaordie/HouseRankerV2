@@ -7,21 +7,23 @@
  * See a full list of supported triggers at https://firebase.google.com/docs/functions
  */
 
-const { onDocumentUpdated, onDocumentWritten } = require("firebase-functions/v2/firestore");
+const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 const functions = require("firebase-functions")
-require("dotenv").config();
-const stripe = require("stripe")(String(process.env.STRIPE_SECRET_KEY));
-const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY
 const axios = require('axios');
-const cors = require('cors')({ origin: true });
+require("dotenv").config();
+const ENV = process.env.ENV
+
+const stripe = require("stripe")(ENV == "PROD" ? String(process.env.STRIPE_SECRET_KEY_PROD) : String(process.env.STRIPE_SECRET_KEY));
+const STRIPE_WEBHOOK_SECRET = ENV == "PROD" ? process.env.STRIPE_WEBHOOK_SECRET_PROD:process.env.STRIPE_WEBHOOK_SECRET
+const CAPTCHA_SECRET_KEY = ENV == "PROD" ? process.env.CAPTCHA_SECRET_KEY_PROD : process.env.CAPTCHA_SECRET_KEY
+const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY
 
 // Initialize the Firebase Admin SDK
 admin.initializeApp();
 
 const db = admin.firestore();
 // Your secret key from Google reCAPTCHA
-const SECRET_KEY = '6Lfxwb0qAAAAAHd3ehvXMrVuuHvavGu0yp1UWO3b'; // Replace with your actual secret key from Google
 
 // Firebase Function to verify reCAPTCHA token
 exports.verifyRecaptcha = functions.https.onCall(async (data, context) => {
@@ -34,7 +36,7 @@ exports.verifyRecaptcha = functions.https.onCall(async (data, context) => {
     // Send a request to Google reCAPTCHA verification endpoint
     const response = await axios.post('https://www.google.com/recaptcha/api/siteverify', null, {
       params: {
-        secret: SECRET_KEY,
+        secret: CAPTCHA_SECRET_KEY,
         response: token,
       },
     });
@@ -162,7 +164,7 @@ dummy_values = async (entryId, poiId) => {
 
 exports.calculateDistance = functions.https.onCall(async (data, context) => {
   const { entryId, poiId } = data.data;
-  if (1)
+  if (0)
     return dummy_values(entryId, poiId)
   else {
     try {
@@ -217,12 +219,7 @@ exports.calculateDistance = functions.https.onCall(async (data, context) => {
 
       for (const mode of modes) {
         const url = `https://maps.googleapis.com/maps/api/distancematrix/json`;
-        console.log({
-          origins: `${entryGeoloc.lat},${entryGeoloc.lon}`,
-          destinations: `${poiGeoloc.lat},${poiGeoloc.lon}`,
-          key: GOOGLE_MAPS_API_KEY,
-          mode: mode,
-        })
+        console.log(entryGeoloc)
         const response = await axios.get(url, {
           params: {
             origins: `${entryGeoloc.lat},${entryGeoloc.lon}`,
@@ -231,13 +228,13 @@ exports.calculateDistance = functions.https.onCall(async (data, context) => {
             mode: mode,
           }
         });
-
+        console.log(response.data)
         const result = response.data;
 
         if (result.status !== 'OK' || result.rows[0].elements[0].status !== 'OK') {
           throw new functions.https.HttpsError('internal', `Error fetching ${mode} data from Google Maps API.`);
         }
-        console.log(result.rows[0].elements[0].duration.value)
+
         distances[modesave[mode]] = Math.round(result.rows[0].elements[0].duration.value / 60); // Duration in seconds
       }
 
@@ -257,16 +254,13 @@ exports.calculateDistance = functions.https.onCall(async (data, context) => {
 });
 
 
-exports.createPaymentIntent = functions.https.onRequest(async (req, res) => {
+exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
   try {
-    if (req.method !== "POST") {
-      return res.status(405).send({ error: "Only POST requests are allowed." });
-    }
-
-    const { amount, uid } = req.body;
+    const amount = data.data.amount;
+    const uid = data.data.uid;
 
     if (!amount || typeof amount !== "number") {
-      return res.status(400).send({ error: "Invalid or missing amount." });
+      throw new functions.https.HttpsError('internal', 'Wrong ammount');
     }
 
     // Set a timeout to prevent the request from hanging too long
@@ -285,20 +279,19 @@ exports.createPaymentIntent = functions.https.onRequest(async (req, res) => {
 
     const paymentIntent = await Promise.race([stripeCall, timeoutPromise]);
 
-    res.status(200).send({ clientSecret: paymentIntent.client_secret });
+    return paymentIntent.client_secret;
   } catch (error) {
-    console.error("Error creating Payment Intent:", error.message);
-    res.status(500).send({ error: `Internal Server Error: ${error.message}` });
+    console.error('Error creating payment intent:', error);
+    throw new functions.https.HttpsError('internal', 'Unable to create payment intent');
   }
 });
 
 exports.handleStripeWebhook = functions.https.onRequest(async (req, res) => {
   const sig = req.headers["stripe-signature"];
-  const endpointSecret = "whsec_bd46jDBRQC0NKP5Au0cxJRQRaA54SK1A"; // Set this in your Stripe dashboard
-  const tokens = { 2050: { "pointsOfInterest": 3, "entries": 25 }, 1550: { "pointsOfInterest": 3, "entries": 15 }, 750: { "pointsOfInterest": 0, "entries": 10 } };
+  const tokens = { 2000: { "pointsOfInterest": 3, "entries": 40 }, 1000: { "pointsOfInterest": 3, "entries": 15 }, 500: { "pointsOfInterest": 0, "entries": 20 } };
   let event;
   try {
-    event = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
+    event = stripe.webhooks.constructEvent(req.rawBody, sig, STRIPE_WEBHOOK_SECRET);
   } catch (err) {
     console.error("Webhook error:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);

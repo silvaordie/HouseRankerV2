@@ -1,0 +1,46 @@
+{
+    "manifest_version": 3,
+    "name": "Property Listing Scraper",
+    "version": "1.0",
+    "description": "Scrapes property listing details from supported websites",
+    "permissions": [
+        "activeTab",
+        "scripting",
+        "offscreen",
+        "cookies",
+        "storage"
+    ],
+    "action": {
+        "default_popup": "popup.html",
+        "default_title": "Property Scraper"
+    },
+    "background": {
+        "service_worker": "background.js",
+        "type": "module"
+    },
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "services/*.js",
+                "lib/firebase/*.js",
+                "offscreen.html"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
+        }
+    ],
+    "host_permissions": [
+        "https://*.firebaseio.com/*",
+        "https://*.firebase.com/*",
+        "https://*.firebaseapp.com/*"
+    ],
+    "content_security_policy": {
+        "extension_pages": "script-src 'self'; object-src 'self'",
+        "sandbox": "sandbox allow-scripts allow-forms allow-popups allow-modals; script-src 'self' 'unsafe-inline' 'unsafe-eval'; child-src 'self' https://*.firebaseapp.com https://*.firebase.com https://*.gstatic.com"
+    },
+    "oauth2": {
+        "client_id": "891340696969-qh42kvi0qhssbmonmubsc86olq51oh05.apps.googleusercontent.com",
+        "scopes": ["openid", "email", "profile"]
+    }
+}

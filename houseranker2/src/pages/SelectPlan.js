@@ -6,10 +6,12 @@ import { useSearchParams } from "react-router-dom";
 import "./SelectPlan.css"; // Import the CSS file
 import { useCaptchaVerification } from "../components/verifyCaptcha";
 
-if (process.env.REACT_APP_STRIPE_PUBLIC_KEY === undefined) {
-  throw new Error("REACT_APP_STRIPE_PUBLIC_KEY is not defined");
-}
-const stripePromise = loadStripe(String(process.env.REACT_APP_STRIPE_PUBLIC_KEY));
+const STRIPE_PUBLIC_KEY = process.env.REACT_APP_ENV == "PROD" ?  process.env.REACT_APP_STRIPE_PUBLIC_KEY_PROD : process.env.REACT_APP_STRIPE_PUBLIC_KEY
+
+if (STRIPE_PUBLIC_KEY == undefined)
+  throw new Error("Stripe public key is not defined");
+
+const stripePromise = loadStripe(String(STRIPE_PUBLIC_KEY));
 function SelectPlan() {
   const [selectedPlan, setSelectedPlan] = useState("2-tier");
   const [searchParams] = useSearchParams();
@@ -36,12 +38,12 @@ function SelectPlan() {
     return <div>Verifying CAPTCHA...</div>;
   }
 
-  const prices = { "1-tier": 7.5, "2-tier": 15.5, "3-tier": 20.5 }
+  const prices = { "1-tier": 5, "2-tier": 10, "3-tier": 20 }
   const plans = [
     {
       id: "1-tier",
       title: "1-Tier",
-      description: ["+10 House entries"],
+      description: ["+20 House entries"],
     },
     {
       id: "2-tier",
@@ -51,7 +53,7 @@ function SelectPlan() {
     {
       id: "3-tier",
       title: "3-Tier",
-      description: ["+3 Points of interest", "+25 House entries"],
+      description: ["+3 Points of interest", "+40 House entries"],
     },
   ];
 

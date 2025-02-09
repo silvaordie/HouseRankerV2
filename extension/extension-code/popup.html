@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      width: 300px;
+      padding: 15px;
+      font-family: Arial, sans-serif;
+      background-color: var(--background-color);
+      color: var(--text-color);
+    }
+    .status {
+      margin-bottom: 15px;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .status.error {
+      background-color: var(--error-background-color);
+      color: var(--error-text-color);
+    }
+    .status.success {
+      background-color: var(--success-background-color);
+      color: var(--success-text-color);
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background-color: var(--button-background-color);
+      color: var(--button-text-color);
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background-color: var(--button-disabled-background-color);
+      cursor: not-allowed;
+    }
+    .listing {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 20px; /* Increase bottom margin to prevent tooltip clipping */
+      background-color: var(--listing-background-color);
+      padding: 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      position: relative;
+    }
+    .listing:hover::after {
+      content: "Click to toggle details, Ctrl+Click to open listing";
+      position: absolute;
+      bottom: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--background-color);
+      color: var(--text-color);
+      border: 1px solid var(--text-color);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      white-space: nowrap;
+      z-index: 1000;
+      opacity: 0.95;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .listing.exporting:hover::after,
+    .listing.exported:hover::after,
+    .listing.failed:hover::after {
+      content: "Click to open listing";
+    }
+    .listing-header {
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+    .listing img {
+      width: 50px;
+      height: 50px;
+      margin-right: 10px;
+      border-radius: 4px;
+      object-fit: cover;
+    }
+    .listing-address {
+      flex-grow: 1;
+      margin-left: 10px;
+    }
+    .listing-details {
+      display: none;
+      width: 90%;
+      margin-top: 10px;
+      background-color: var(--details-background-color);
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .listing input[type="checkbox"] {
+      margin-right: 10px;
+    }
+
+    .selection-controls {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background-color: var(--background-color);
+      padding: 10px 0;
+      display: none;
+      gap: 10px;
+    }
+    .selection-controls button {
+      flex: 1;
+      padding: 5px;
+      font-size: 12px;
+    }
+    .export-controls {
+      position: sticky;
+      bottom: 0;
+      z-index: 100;
+      background-color: var(--background-color);
+      padding: 10px 0;
+      margin-top: 10px;
+    }
+    #listingsContainer {
+      max-height: 400px;
+      overflow-y: auto;
+      padding-bottom: 20px;
+    }
+
+    /* Light mode variables */
+    :root {
+      --background-color: #ffffff;
+      --text-color: #000000;
+      --error-background-color: #ffe6e6;
+      --error-text-color: #cc0000;
+      --success-background-color: #e6ffe6;
+      --success-text-color: #006600;
+      --button-background-color: #4CAF50;
+      --button-text-color: #ffffff;
+      --button-disabled-background-color: #cccccc;
+      --listing-background-color: #f9f9f9;
+      --details-background-color: #f1f1f1;
+    }
+
+    /* Dark mode variables */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --background-color: #121212;
+        --text-color: #ffffff;
+        --error-background-color: #4d0000;
+        --error-text-color: #ff6666;
+        --success-background-color: #003300;
+        --success-text-color: #66ff66;
+        --button-background-color: #4CAF50;
+        --button-text-color: #ffffff;
+        --button-disabled-background-color: #666666;
+        --listing-background-color: #1e1e1e;
+        --details-background-color: #2e2e2e;
+      }
+    }
+    .auth-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .google-signin {
+      background-color: #4285f4;
+    }
+    .facebook-signin {
+      background-color: #3b5998;
+    }
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .user-info img {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+    }
+    .signout-btn {
+      background-color: #dc3545;
+    }
+    .listing-export-status {
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 4px;
+        display: flex;
+        flex-direction: column;
+        cursor: pointer;
+    }
+
+    .listing.exporting .listing-export-status {
+        background-color: var(--listing-background-color);
+    }
+
+    .listing.exported .listing-export-status {
+        background-color: var(--success-background-color);
+        color: var(--success-text-color);
+    }
+
+    .listing.failed .listing-export-status {
+        background-color: var(--error-background-color);
+        color: var(--error-text-color);
+    }
+
+    .error-details {
+        font-size: 0.8em;
+        margin-top: 5px;
+        opacity: 0.8;
+    }
+
+    .listing-export-status {
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .listing-export-status .listing-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .listing-export-status .listing-image {
+        width: 50px;
+        height: 50px;
+        border-radius: 4px;
+        object-fit: cover;
+    }
+
+    .listing-export-status .status-content {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .listing-export-status .listing-address {
+        font-weight: bold;
+        word-break: break-word;
+    }
+
+    .listing-export-status .status-text {
+        font-size: 0.9em;
+    }
+
+    .listing.exporting .listing-export-status {
+        background-color: var(--listing-background-color);
+    }
+
+    .listing.exported .listing-export-status {
+        background-color: var(--success-background-color);
+    }
+
+    .listing.failed .listing-export-status {
+        background-color: var(--error-background-color);
+    }
+
+    .listing-export-status:hover {
+        opacity: 0.9;
+    }
+
+    .listing, .listing-export-status {
+        cursor: pointer;
+    }
+
+    .listing:hover, .listing-export-status:hover {
+        opacity: 0.9;
+    }
+  </style>
+  <!-- Replace CDN scripts with local files -->
+  <script src="lib/firebase/firebase-app-compat.js"></script>
+  <script src="lib/firebase/firebase-auth-compat.js"></script>
+  <script src="lib/firebase/firebase-firestore-compat.js"></script>
+  <!-- Your other scripts -->
+  <script src="services/firebase-handler.js"></script>
+  <script src="scrapers/base-scraper.js"></script>
+  <script src="scrapers/idealista-scraper.js"></script>
+  <script src="scrapers/immo24-scraper.js"></script>
+  <script src="scrapers/rightmove-scraper.js"></script>
+  <script src="scrapers/scraper-factory.js"></script>
+  <script src="scraper.js"></script>
+  <script src="popup.js"></script>
+  <link rel="stylesheet" href="styles/loading-overlay.css">
+</head>
+<body>
+  <div id="status" class="status"></div>
+  <div id="authContainer" class="auth-container">
+    <button id="googleSignIn" class="google-signin">Sign in with Google</button>
+    <button id="facebookSignIn" class="facebook-signin">Sign in with Facebook</button>
+  </div>
+  <div id="userInfo" class="user-info" style="display: none;">
+    <img id="userAvatar" src="" alt="User avatar">
+    <span id="userName"></span>
+    <button id="signOutBtn" class="signout-btn">Sign Out</button>
+  </div>
+  <button id="scrapeButton" style="display: none;">Scrape Listings</button>
+  <div class="selection-controls" id="selectionControls">
+    <button id="selectAllBtn">Select All</button>
+    <button id="deselectAllBtn">Deselect All</button>
+  </div>
+  <div id="listingsContainer"></div>
+  <div class="export-controls">
+    <button id="exportBtn" style="display: none;">Export Selected Listings</button>
+  </div>
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-content">
+      <div class="circular-progress">
+        <div class="progress-text">0%</div>
+      </div>
+      <div class="status-text">Exporting listings...</div>
+      <div class="warning-text">Please do not close or click away from the extension</div>
+    </div>
+  </div>
+</body>
+</html>
