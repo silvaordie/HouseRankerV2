@@ -42,10 +42,6 @@ const ImportOverlay = ({ onClose, userData, onImportComplete, onCreateManual }) 
     if (selectedEntries.includes(entry.id)) {
       setSelectedEntries(prev => prev.filter(id => id !== entry.id));
     } else {
-      if (selectedEntries.length >= userData.tokens.entries) {
-        setError(`You can only select up to ${userData.tokens.entries} entries with your current plan`);
-        return;
-      }
       setSelectedEntries(prev => [...prev, entry.id]);
       setError(null);
     }
@@ -211,12 +207,15 @@ const ImportOverlay = ({ onClose, userData, onImportComplete, onCreateManual }) 
             Import ({selectedEntries.length}) entries
           </Button>
         </div>
-        
+        {console.log(importedEntries.filter(e => selectedEntries.includes(e.id)))}
         <div className="import-right">
           {importedEntries.length > 0 && selectedEntries.length > 0 ? (
             <MapComponent 
-              entries={importedEntries.filter(e => selectedEntries.includes(e.id))}
+              sortedEntries={importedEntries
+                .filter(e => selectedEntries.includes(e.id))
+                .map(entry => [entry.Address, entry])}
               height="100%"
+              mode="import"
             />
           ) : (
             <div className="import-guide">

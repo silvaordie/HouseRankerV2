@@ -1,5 +1,10 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
+import { getAuth, signInWithPopup, GoogleAuthProvider, connectAuthEmulator } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
+
+// Add environment configuration
+const USE_EMULATOR = true; // Toggle this to switch between prod/emulator
+const EMULATOR_HOST = 'http://localhost';
+const EMULATOR_AUTH_PORT = 9099;
 
 const firebaseConfig = {
   apiKey: "AIzaSyAWyWRwJYUyTfHtb85rEL29g1_AK9RfDWg",
@@ -13,6 +18,13 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+
+// Connect to emulator if enabled
+if (USE_EMULATOR) {
+    connectAuthEmulator(auth, `${EMULATOR_HOST}:${EMULATOR_AUTH_PORT}`, { disableWarnings: true });
+    debugLog('Connected to Auth emulator');
+}
+
 const provider = new GoogleAuthProvider();
 
 // Add this after Firebase initialization
@@ -48,7 +60,8 @@ function formatAuthResponse(result) {
     credential: {
       accessToken: result.credential?.accessToken,
       idToken: result.credential?.idToken
-    }
+    },
+    environment: USE_EMULATOR ? 'emulator' : 'production'
   };
 }
 
@@ -139,4 +152,7 @@ window.addEventListener('message', async (event) => {
 
 // Send ready message when loaded
 debugLog('Sending ready message');
-sendMessageToParent({ type: 'AUTH_PAGE_READY' });
+sendMessageToParent({ 
+    type: 'AUTH_PAGE_READY',
+    environment: USE_EMULATOR ? 'emulator' : 'production'
+});
