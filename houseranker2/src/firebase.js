@@ -36,7 +36,7 @@ if (ENV != "PROD")
   try {
     console.log("Connecting to Firebase emulators...");
     connectFunctionsEmulator(functions, "localhost", 5001);
-    connectFirestoreEmulator(db, "127.0.0.1", 8080);
+    //connectFirestoreEmulator(db, "127.0.0.1", 8080);
     //connectAuthEmulator(auth, "http://127.0.0.1:9099");
     localStorage.setItem('firebase_performance_debug', true);
   } catch (e) {

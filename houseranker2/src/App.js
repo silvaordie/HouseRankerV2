@@ -16,6 +16,7 @@ const App = () => {
     script.async = true;
     script.defer = true;
     document.head.appendChild(script);
+    console.log(currentUser)
     return (
         <Router>
         <Routes>
