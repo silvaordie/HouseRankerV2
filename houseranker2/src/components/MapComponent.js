@@ -64,7 +64,8 @@ const CenterAndZoomUpdater = ({ pointsOfInterest = {}, sortedEntries = [] }) => 
 };
 
 
-const MapComponent = ({ pointsOfInterest = {}, sortedEntries = [] }) => {
+const MapComponent = ({ pointsOfInterest = {}, sortedEntries = [], mode = 'ranking' }) => {
+  console.log(sortedEntries)
   const getCustomIcon = (color) => {
     return L.AwesomeMarkers.icon({
       icon: "fa-home",
@@ -110,26 +111,41 @@ const MapComponent = ({ pointsOfInterest = {}, sortedEntries = [] }) => {
           return null;
         })}
 
-        {/* Render the top 4 custom-ranked markers */}
-        {sortedEntries && sortedEntries.slice(0, 4).map(([id, entry], index) => {
-          const colors = ["blue", "green", "orange", "red"];
-          const iconColor = colors[index];
-          if (entry?.geolocation?.lat && entry?.geolocation?.lon) {
-            return (
-              <Marker
-                key={`entry-${id}`}
-                position={[
-                  entry.geolocation.lat,
-                  entry.geolocation.lon,
-                ]}
-                icon={getCustomIcon(iconColor)}
-              >
-                <Popup>{entry.info?.Address || 'Property'}</Popup>
-              </Marker>
-            );
-          }
-          return null;
-        })}
+        {/* Render entries based on mode */}
+        {sortedEntries && (mode === 'ranking' ? 
+          // Ranking mode - top 4 with different colors
+          sortedEntries.slice(0, 4).map(([id, entry], index) => {
+            const colors = ["blue", "green", "orange", "red"];
+            if (entry?.geolocation?.lat && entry?.geolocation?.lon) {
+              return (
+                <Marker
+                  key={`entry-${id}`}
+                  position={[entry.geolocation.lat, entry.geolocation.lon]}
+                  icon={getCustomIcon(colors[index])}
+                >
+                  <Popup>{entry.Address || 'Property'}</Popup>
+                </Marker>
+              );
+            }
+            return null;
+          })
+          : 
+          // Import mode - up to 50 entries all in blue
+          sortedEntries.slice(0, 50).map(([id, entry]) => {
+            if (entry?.geolocation?.lat && entry?.geolocation?.lon) {
+              return (
+                <Marker
+                  key={`entry-${id}`}
+                  position={[entry.geolocation.lat, entry.geolocation.lon]}
+                  icon={getCustomIcon("blue")}
+                >
+                  <Popup>{entry.Address || 'Property'}</Popup>
+                </Marker>
+              );
+            }
+            return null;
+          })
+        )}
       </MapContainer>
     </div>
   );

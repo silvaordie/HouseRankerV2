@@ -28,6 +28,7 @@ import { trace } from "firebase/performance";
 import { useCaptchaVerification } from '../components/verifyCaptcha';
 import BugReportButton from '../components/BugReportButton';
 import ImportOverlay from '../components/ImportOverlay/ImportOverlay';
+import WebPageOverlay from '../components/WebPageOverlay/WebPageOverlay';
 
 const Dashboard = () => {
   // const useStateWithCache = (key, defaultValue) => {
@@ -77,6 +78,8 @@ const Dashboard = () => {
   const captchaVerified = useCaptchaVerification();
   const [showImportOverlay, setShowImportOverlay] = useState(false);
   const [editModalTimer, setEditModalTimer] = useState(null);
+  const [isWebPageOpen, setIsWebPageOpen] = useState(false);
+  const [currentUrl, setCurrentUrl] = useState('');
   useEffect(() => {
     if (!captchaVerified) {
       // If the CAPTCHA is not verified, you might want to display a loading indicator
@@ -338,13 +341,14 @@ const Dashboard = () => {
         setAddress(point);
         setPoiSliders(pointsOfInterest[point].importance);
         setName(pointsOfInterest[point].name);
-        if (pointsOfInterest[point].maxs) { setMaxs(pointsOfInterest[point].maxs) }
+        setMaxs(pointsOfInterest[point].maxs || { walking: 0, transport: 0, car: 0 });
         setCurrentPoint(point);
         setIsNewPointOpen(true);
       } else {
         if (userData && userData.tokens.pointsOfInterest > 0) {
           setAddress('');
           setPoiSliders({ "walking": 0, "car": 0, "transport": 0 });
+          setMaxs({ walking: 0, transport: 0, car: 0 });
           setCurrentPoint(null);
           setIsNewPointOpen(true);
         }
@@ -636,15 +640,20 @@ const Dashboard = () => {
     if (!currentUser) return null;
 
     return sortedEntries.map(([entryId, entry], rowIndex) => {
+      const handleLinkClick = (e, url) => {
+        e.stopPropagation(); // Prevent row click event
+        setCurrentUrl(url);
+        setIsWebPageOpen(true);
+      };
+
       const baseDataCells = [
         <td key="link">
-          {/* Use Tooltip and LinkIcon */}
           <Tooltip title={entry.info.Link} arrow>
             <span>
               {entry.info.Link ?
-                <a href={entry.info.Link} target="_blank" rel="noopener noreferrer">
+                <span onClick={(e) => handleLinkClick(e, entry.info.Link)}>
                   <LinkIcon style={{ fontSize: '18px', cursor: 'pointer' }} />
-                </a>
+                </span>
                 :
                 <Typography>-</Typography>
               }
@@ -1062,11 +1071,11 @@ const Dashboard = () => {
               <input
                 type="number"
                 style={{ width: '60px' }}
-                value={pointsOfInterest[currentPoint] ? pointsOfInterest[currentPoint].maxs["walking"] : maxs[0]}
+                value={maxs.walking || 0}
                 placeholder="mins"
                 onChange={(e) => setMaxs(prevMaxs => ({
                   ...prevMaxs,
-                  "walking": parseInt(e.target.value) || 0,
+                  walking: parseInt(e.target.value) || 0,
                 }))}
               />
             </div>
@@ -1088,11 +1097,11 @@ const Dashboard = () => {
             <input
               type="number"
               style={{ width: '60px', marginLeft: '20px' }}
-              value={pointsOfInterest[currentPoint] ? pointsOfInterest[currentPoint].maxs["transport"] : maxs[1]}
+              value={maxs.transport || 0}
               placeholder="mins"
               onChange={(e) => setMaxs(prevMaxs => ({
                 ...prevMaxs,
-                "transport": parseInt(e.target.value) || 0,
+                transport: parseInt(e.target.value) || 0,
               }))} />
           </div>
 
@@ -1112,11 +1121,11 @@ const Dashboard = () => {
             <input
               type="number"
               style={{ width: '60px', marginLeft: '20px' }}
-              value={pointsOfInterest[currentPoint] ? pointsOfInterest[currentPoint].maxs["car"] : maxs[2]}
+              value={maxs.car || 0}
               placeholder="mins"
               onChange={(e) => setMaxs(prevMaxs => ({
                 ...prevMaxs,
-                "car": parseInt(e.target.value) || 0,
+                car: parseInt(e.target.value) || 0,
               }))} />
           </div>
 
@@ -1142,6 +1151,11 @@ const Dashboard = () => {
           onCreateManual={handleCreateManualEntry}
         />
       )}
+      <WebPageOverlay
+        open={isWebPageOpen}
+        onClose={() => setIsWebPageOpen(false)}
+        url={currentUrl}
+      />
     </div>
   );
 };

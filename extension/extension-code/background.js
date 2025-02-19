@@ -1,7 +1,6 @@
 // Import Firebase modules
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.2/firebase-app.js';
-import { getAuth } from 'https://www.gstatic.com/firebasejs/10.7.2/firebase-auth.js';
-import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore.js';
+import { getFirestore, connectFirestoreEmulator } from 'https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore.js';
 import { exportListingToFirestore } from '/services/firebase-handler.js';  // Update path
 
 // Firebase configuration
@@ -17,13 +16,19 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
 const db = getFirestore(app);
+
+export const isEmulator = true; // Can be controlled via environment or configuration
+
+// After initializing Firebase (after db and auth are created)
+if (isEmulator) {
+  connectFirestoreEmulator(db, 'localhost', 8080);
+}
 
 const OFFSCREEN_DOCUMENT_PATH = 'offscreen.html';
 
 // Export functions for use in other parts of the extension
-export { auth, db };
+export { db };
 
 chrome.runtime.onInstalled.addListener(() => {
     console.log('Property Scraper Extension installed');
